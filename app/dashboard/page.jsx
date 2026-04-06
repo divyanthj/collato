@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { auth, signIn, signOut } from "@/auth";
+import logo from "@/app/logo.png";
+import appConfig from "@/config/app";
 import { AccessGateway } from "@/components/access-gateway";
 import { AuthEntryPanel } from "@/components/auth-entry-panel";
 import { InviteInbox } from "@/components/invite-inbox";
@@ -45,14 +47,14 @@ export default async function WorkspacePage() {
         <aside className="glass-panel rounded-[2rem] p-5 xl:sticky xl:top-4 xl:self-start">
           <div className="brand-card p-3">
             <Image
-              src="/collato-logo.png"
+              src={logo}
               alt="Collato.io logo"
               width={420}
               height={220}
               className="h-auto w-full"
             />
             <div className="mt-3 text-xs uppercase tracking-[0.22em] text-base-content/55">
-              Knowledge, updates, and execution in one flow
+              {appConfig.brand.tagline}
             </div>
           </div>
 

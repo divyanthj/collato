@@ -1,7 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { auth, signIn } from "@/auth";
+import logo from "@/app/logo.png";
+import appConfig from "@/config/app";
 import { AuthEntryPanel } from "@/components/auth-entry-panel";
+import { PricingSection } from "@/components/pricing-section";
 
 const pillars = [
   {
@@ -36,12 +39,15 @@ export default async function LandingPage() {
           <div className="relative px-8 py-8 lg:px-12 lg:py-12">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="badge badge-outline border-primary/25 bg-base-100/70 px-4 py-4 uppercase tracking-[0.28em] text-primary">
-                Collato.io
+                {appConfig.appName}
               </div>
 
               <div className="flex flex-wrap gap-3">
                 <Link href="#features" className="btn btn-ghost">
                   Features
+                </Link>
+                <Link href="#pricing" className="btn btn-ghost">
+                  Pricing
                 </Link>
                 {session?.user ? (
                   <Link href="/dashboard" className="btn btn-primary">
@@ -64,7 +70,7 @@ export default async function LandingPage() {
               <div className="space-y-8">
                 <div className="brand-card inline-flex max-w-[340px] items-center justify-center p-4">
                   <Image
-                    src="/collato-logo.png"
+                    src={logo}
                     alt="Collato.io logo"
                     width={520}
                     height={280}
@@ -74,13 +80,12 @@ export default async function LandingPage() {
                 </div>
 
                 <div className="space-y-5">
-                  <p className="section-kicker">Project intelligence, collated</p>
+                  <p className="section-kicker">{appConfig.brand.heroKicker}</p>
                   <h1 className="font-display max-w-4xl text-5xl font-semibold leading-[0.92] text-neutral lg:text-7xl">
-                    Turn scattered project signals into one shared operating memory.
+                    {appConfig.brand.heroHeadline}
                   </h1>
                   <p className="max-w-2xl text-lg leading-8 text-base-content/72">
-                    Collato.io brings files, field updates, team decisions, and AI answers into the same
-                    workspace so the whole project team can move from context switching to coordinated execution.
+                    {appConfig.brand.heroBody}
                   </p>
                 </div>
 
@@ -149,6 +154,8 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      <PricingSection pricing={appConfig.pricing} isAuthenticated={Boolean(session?.user)} />
     </main>
   );
 }

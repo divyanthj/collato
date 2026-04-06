@@ -1,5 +1,6 @@
 import { Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import appConfig from "@/config/app";
 
 const bodyFont = Manrope({
   subsets: ["latin"],
@@ -12,8 +13,8 @@ const displayFont = Space_Grotesk({
 });
 
 export const metadata = {
-  title: "Collato.io",
-  description: "Shared workspaces for project knowledge, team updates, task follow-through, and grounded AI answers.",
+  title: appConfig.appName,
+  description: appConfig.appDescription,
 };
 
 export default function RootLayout({ children }) {

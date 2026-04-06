@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { createWorkspace } from "@/lib/data";
+import { createWorkspace, deleteWorkspace } from "@/lib/data";
 export const POST = auth(async (request) => {
     if (!request.auth?.user?.email) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,6 +24,32 @@ export const POST = auth(async (request) => {
     catch (error) {
         const message = error instanceof Error ? error.message : "Could not create workspace";
         const status = message === "You do not have permission to create workspaces" ? 403 : 400;
+        return NextResponse.json({ error: message }, { status });
+    }
+});
+export const DELETE = auth(async (request) => {
+    if (!request.auth?.user?.email) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const body = await request.json();
+    const workspaceSlug = String(body.workspaceSlug ?? "").trim();
+    if (!workspaceSlug) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+    try {
+        const result = await deleteWorkspace({
+            workspaceSlug,
+            requesterEmail: request.auth.user.email
+        });
+        return NextResponse.json(result, { status: 200 });
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : "Could not delete workspace";
+        const status = message === "Only workspace owners or organization admins can delete workspaces"
+            ? 403
+            : message === "Workspace not found"
+                ? 404
+                : 400;
         return NextResponse.json({ error: message }, { status });
     }
 });

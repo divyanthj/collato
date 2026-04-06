@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
+import { WorkspaceDangerZone } from "@/components/workspace-danger-zone";
 import { WorkspaceMemberManager } from "@/components/workspace-member-manager";
 import { getWorkspaceDetailData } from "@/lib/data";
 export default async function WorkspaceDetailPage({ params }) {
@@ -194,6 +195,8 @@ export default async function WorkspaceDetailPage({ params }) {
                 <WorkspaceMemberManager workspace={workspace} canManageMembers={permissions.canManageWorkspaceMembers}/>
               </div>
             </div>
+
+            <WorkspaceDangerZone workspace={workspace} canDeleteWorkspace={permissions.canManageWorkspaceMembers}/>
           </div>
 
           <div className="space-y-6">
