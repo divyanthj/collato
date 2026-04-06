@@ -1,33 +1,63 @@
-# ShipFast — Javascript
+# Collato.io
 
-Hey maker 👋 it's Marc from [ShipFast](https://shipfa.st/docs). Let's get your startup off the ground, FAST ⚡️
+Frontend workspace app for Collato.io, focused on project knowledge, team updates, tasks, and grounded AI assistance.
 
-<sub>**Watch/Star the repo to be notified when updates are pushed**</sub>
+## Stack
 
-## Get Started
+- Next.js (App Router)
+- JavaScript
+- Tailwind CSS
+- DaisyUI
+- Auth.js / NextAuth
+- Resend
 
-1. Follow the [Get Started Tutorial](https://shipfa.st/docs) to clone the repo and run your local server 💻
+## What the POC shows
 
-<sub>**Looking for the /pages router version?** Use this [documentation](https://shipfa.st/docs-old) instead</sub>
+- Project-first dashboard
+- Chat-style update capture
+- Monthly report builder preview
+- Review queue and export/send affordances
+- SaaS-friendly product framing
 
-2. Follow the [Ship In 5 Minutes Tutorial](https://shipfa.st/docs/tutorials/ship-in-5-minutes) to learn the foundation and ship your app quickly ⚡️
+## Run locally
 
-## Links
+1. Add env vars to `.env.local`
+2. `cmd /c npm install`
+3. `cmd /c npm run dev`
 
-- [📚 Documentation](https://shipfa.st/docs)
-- [📣 Updates](https://shipfast.beehiiv.com/)
-- [🧑‍💻 Discord](https://shipfa.st/dashboard)
+Then open `http://localhost:3000`.
 
-## Support
+## Required env vars
 
-Reach out to me on [Twitter](https://twitter.com/marc_louvion) or marc@shipfa.st
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `MONGODB_URI`
+- `OPENAI_API_KEY`
+- `AUTH_SECRET`
 
-\_
+To enable email sign-in and outbound email scaffolding:
 
-Let's ship it, FAST ⚡️
+- `AUTH_RESEND_KEY`
+- `AUTH_RESEND_FROM`
+- `RESEND_REPLY_TO`
+- `AUTH_URL` or `NEXTAUTH_URL`
 
-P.S.
+## Wired basics
 
-- Want to showcase your startups? Get your [Indie Page](https://indiepa.ge?ref=shipfast_readme) and share your entrepreneur's journey. Join 3,132 founders ⭐️
-- Don't get banned from Stripe for 1 dispute. Use [ByeDispute](https://byedispute.com/?ref=shipfast_readme) to prevent them from happenening 🛡️
-- Make your launch go viral and get your first customers with [LaunchViral](https://launchvir.al/?ref=shipfast_readme) 🚀
+- Google sign-in with Auth.js
+- Email magic-link sign-in with Auth.js + Resend
+- MongoDB-backed seeded projects and saved updates
+- OpenAI-powered update structuring via `/api/ai/structure-update`
+- Protected save flow via `/api/updates`
+
+## Resend setup
+
+1. Verify `resend.collato.io` as a sending domain in Resend.
+2. Add the DNS records Resend provides for SPF/DKIM/domain verification.
+3. Set `AUTH_RESEND_FROM` to a verified sender, for example `Collato.io <hello@resend.collato.io>`.
+4. Add your Resend API key to `AUTH_RESEND_KEY`.
+
+Reusable email helpers now live in `C:\projects\GSC raw file samples\collato\lib\resend.js`.
+The Auth.js magic-link email is also sent through that helper, so the same verified domain can be reused for future transactional mail.
+
+

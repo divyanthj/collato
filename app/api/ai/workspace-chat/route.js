@@ -1,0 +1,100 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { getAuthorizedWorkspace, getWorkspaceChatContext } from "@/lib/data";
+import { openai } from "@/lib/openai";
+function buildFallbackFollowUps(question) {
+    const trimmed = question.trim();
+    return [
+        `What evidence supports this?`,
+        `What are the open actions related to this?`,
+        trimmed ? `What else in the workspace is connected to "${trimmed}"?` : "What else in the workspace is connected to this?"
+    ];
+}
+export const POST = auth(async (request) => {
+    if (!request.auth?.user?.email) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const body = await request.json();
+    const workspaceSlug = String(body.workspaceSlug ?? "");
+    const question = String(body.question ?? "");
+    if (!workspaceSlug || !question) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+    const workspace = await getAuthorizedWorkspace(workspaceSlug, request.auth.user.email);
+    if (!workspace) {
+        return NextResponse.json({ error: "You do not have access to this workspace" }, { status: 403 });
+    }
+    const context = await getWorkspaceChatContext(workspaceSlug, request.auth.user.email, question);
+    if (!context) {
+        return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+    const encoder = new TextEncoder();
+    const stream = await openai.responses.create({
+        model: "gpt-5.2",
+        stream: true,
+        input: [
+            {
+                role: "system",
+                content: [
+                    {
+                        type: "input_text",
+                        text: "You are a workspace knowledge-base assistant. Answer using the retrieved workspace excerpts first, then use the task context only if it helps. Do not invent facts. If the retrieved context is insufficient, say what is missing clearly."
+                    }
+                ]
+            },
+            {
+                role: "user",
+                content: [
+                    {
+                        type: "input_text",
+                        text: `Workspace: ${context.workspace.name}
+
+Retrieved excerpts:
+${context.retrievedContext || "No retrieved workspace excerpts were found."}
+
+Tasks:
+${context.taskContext || "No tasks available."}
+
+Question:
+${question}`
+                    }
+                ]
+            }
+        ]
+    });
+    const readableStream = new ReadableStream({
+        async start(controller) {
+            try {
+                for await (const event of stream) {
+                    if (event.type === "response.output_text.delta") {
+                        controller.enqueue(encoder.encode(`${JSON.stringify({
+                            type: "delta",
+                            text: event.delta
+                        })}\n`));
+                    }
+                }
+                controller.enqueue(encoder.encode(`${JSON.stringify({
+                    type: "meta",
+                    sources: context.sourceLabels.slice(0, 4),
+                    followUps: buildFallbackFollowUps(question)
+                })}\n`));
+                controller.close();
+            }
+            catch (error) {
+                console.error("Workspace chat stream failed:", error);
+                controller.enqueue(encoder.encode(`${JSON.stringify({
+                    type: "error",
+                    error: "Could not stream workspace answer"
+                })}\n`));
+                controller.close();
+            }
+        }
+    });
+    return new Response(readableStream, {
+        headers: {
+            "Content-Type": "application/x-ndjson; charset=utf-8",
+            "Cache-Control": "no-cache, no-transform",
+            Connection: "keep-alive"
+        }
+    });
+});
