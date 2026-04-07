@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { readResponsePayload } from "@/lib/client-api";
+import { VoiceInputButton } from "@/components/voice-input-button";
 function ReportSection({ title, items, emptyLabel }) {
     return (<div className="rounded-[1.5rem] bg-base-100 p-5">
       <div className="text-sm font-semibold text-neutral">{title}</div>
@@ -14,6 +15,7 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
     const [report, setReport] = useState(null);
     const [missingQuestions, setMissingQuestions] = useState([]);
     const [clarificationAnswers, setClarificationAnswers] = useState({});
+    const [recordingQuestionId, setRecordingQuestionId] = useState(null);
     const [error, setError] = useState(null);
     const [statusMessage, setStatusMessage] = useState(null);
     const [isPending, startTransition] = useTransition();
@@ -72,6 +74,19 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
             catch (reportError) {
                 setError(reportError instanceof Error ? reportError.message : "Could not generate report");
             }
+        });
+    };
+    const appendClarificationTranscript = (questionId, transcript) => {
+        const nextText = String(transcript ?? "").trim();
+        if (!nextText) {
+            return;
+        }
+        setClarificationAnswers((current) => {
+            const existing = String(current[questionId] ?? "").trim();
+            return {
+                ...current,
+                [questionId]: existing ? `${existing} ${nextText}` : nextText
+            };
         });
     };
     const renderReportBody = () => {
@@ -250,9 +265,19 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
 
             <div className="mt-4 space-y-4">
               {missingQuestions.map((question) => (<label key={question.id} className="form-control">
-                  <div className="label flex-col items-start gap-1">
-                    <span className="label-text font-medium text-neutral">{question.question}</span>
-                    <span className="text-xs text-base-content/55">{question.reason}</span>
+                  <div className="label items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <span className="label-text font-medium text-neutral">{question.question}</span>
+                      <span className="mt-1 block text-xs text-base-content/55">{question.reason}</span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <VoiceInputButton onTranscript={(text) => appendClarificationTranscript(question.id, text)} onRecordingChange={(isRecording) => {
+                setRecordingQuestionId(isRecording ? question.id : (current) => current === question.id ? null : current);
+            }}/>
+                      <span className="text-xs uppercase tracking-[0.16em] text-base-content/50">
+                        {recordingQuestionId === question.id ? "Recording" : "Mic"}
+                      </span>
+                    </div>
                   </div>
                   <textarea className="textarea textarea-bordered h-24" value={clarificationAnswers[question.id] ?? ""} onChange={(event) => setClarificationAnswers((current) => ({
                     ...current,
