@@ -99,6 +99,7 @@ export async function POST(request) {
       variantId: variantId ? String(variantId) : "",
       planInterval,
       quantity,
+      subscriptionItemId: attributes?.first_subscription_item?.id ? String(attributes.first_subscription_item.id) : "",
       customerEmail: String(customerEmail || ""),
       customerId,
       orderId: attributes?.order_id ? String(attributes.order_id) : "",

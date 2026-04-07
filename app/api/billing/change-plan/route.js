@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import {
-  createLemonCheckoutUrl,
-  createPortalUrlFromSubscription,
   getBillingStatusForOrganization,
   getSubscriptionForOrganization,
-  resolveOrganizationForUser
+  resolveOrganizationForUser,
+  updateLemonSubscriptionFromApp
 } from "@/lib/billing";
 import { getDatabase } from "@/lib/mongodb";
+
+const ACTIVE_STATUSES = ["active", "on_trial", "trialing", "past_due"];
 
 export async function POST(request) {
   const session = await auth();
@@ -19,7 +20,6 @@ export async function POST(request) {
   const organizationSlug = typeof body.organizationSlug === "string" ? body.organizationSlug.trim() : "";
   const interval = typeof body.interval === "string" ? body.interval : "";
   const quantity = Number(body.quantity);
-  const mode = typeof body.mode === "string" ? body.mode : "switch_plan";
 
   if (!["month", "year"].includes(interval)) {
     return NextResponse.json({ error: "Invalid interval" }, { status: 400 });
@@ -37,82 +37,82 @@ export async function POST(request) {
   const billing = await getBillingStatusForOrganization(organization);
   const subscription = await getSubscriptionForOrganization(organization.slug);
 
-  if (billing.migrationRequired && mode !== "migrate") {
-    return NextResponse.json({ error: "Migration required before changing plan", code: "MIGRATION_REQUIRED" }, { status: 409 });
+  if (!billing.active) {
+    return NextResponse.json({ error: "No active subscription found for this organization." }, { status: 409 });
   }
 
-  if (mode === "switch_plan" && billing.active && subscription) {
-    const portalUrl = await createPortalUrlFromSubscription(subscription);
-    if (portalUrl) {
-      return NextResponse.json({ type: "portal", url: portalUrl }, { status: 200 });
-    }
-  }
-
-  if (!subscription || !billing.active || mode === "new_subscription" || mode === "migrate") {
-    try {
-      const url = await createLemonCheckoutUrl({
-        userEmail: session.user.email,
-        organizationSlug: organization.slug,
-        interval,
-        quantity,
-        mode: mode === "migrate" ? "migrate" : "new_subscription"
-      });
-      return NextResponse.json({ type: "checkout", url }, { status: 200 });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not create checkout";
-      return NextResponse.json({ error: message }, { status: 400 });
-    }
-  }
-
-  const currentInterval = billing.planInterval || "month";
-  const isUpgrade = quantity > billing.quantity || (currentInterval === "month" && interval === "year");
-  const isDowngrade = quantity < billing.quantity || (currentInterval === "year" && interval === "month");
-
-  if (!isUpgrade && !isDowngrade) {
-    return NextResponse.json({ type: "noop", message: "No billing changes detected" }, { status: 200 });
-  }
-
-  if (isUpgrade) {
-    try {
-      const url = await createLemonCheckoutUrl({
-        userEmail: session.user.email,
-        organizationSlug: organization.slug,
-        interval,
-        quantity,
-        mode: "upgrade_quantity"
-      });
-      return NextResponse.json({ type: "checkout", url }, { status: 200 });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not create checkout";
-      return NextResponse.json({ error: message }, { status: 400 });
-    }
+  if (!subscription?.subscriptionId) {
+    return NextResponse.json(
+      {
+        error: "No updatable subscription record found for this organization. Use billing portal to create or relink a subscription first."
+      },
+      { status: 409 }
+    );
   }
 
   const db = await getDatabase();
   const subscriptionsCollection = db.collection("billing_subscriptions");
-  const scheduledChange = {
-    interval,
-    quantity,
-    effectiveAt: billing.currentPeriodEnd || null,
-    requestedBy: session.user.email,
-    requestedAt: new Date().toISOString()
-  };
+  const activeSubscriptionCount = await subscriptionsCollection.countDocuments({
+    organizationSlug: organization.slug,
+    status: { $in: ACTIVE_STATUSES }
+  });
 
-  await subscriptionsCollection.updateOne(
-    { organizationSlug: organization.slug },
-    {
-      $set: {
-        scheduledChange,
-        updatedAt: new Date()
-      }
-    }
-  );
+  if (activeSubscriptionCount > 1) {
+    return NextResponse.json(
+      {
+        error:
+          "Multiple active subscriptions are linked to this organization. To avoid changing the wrong subscription, update seats in Lemon Squeezy portal."
+      },
+      { status: 409 }
+    );
+  }
 
-  return NextResponse.json(
-    {
-      type: "scheduled",
-      scheduledChange
-    },
-    { status: 200 }
-  );
+  try {
+    const updated = await updateLemonSubscriptionFromApp({
+      subscriptionId: subscription.subscriptionId,
+      interval,
+      quantity
+    });
+
+    await subscriptionsCollection.updateOne(
+      { subscriptionId: updated.subscriptionId },
+      {
+        $set: {
+          organizationSlug: organization.slug,
+          status: updated.status,
+          subscriptionItemId: updated.subscriptionItemId,
+          variantId: updated.variantId,
+          planInterval: updated.planInterval,
+          quantity: updated.quantity,
+          customerEmail: subscription.customerEmail || session.user.email,
+          customerId: subscription.customerId || "",
+          renewsAt: updated.renewsAt,
+          endsAt: updated.endsAt,
+          currentPeriodEnd: updated.currentPeriodEnd,
+          portalUrl: updated.portalUrl,
+          isLegacyVariant: updated.isLegacyVariant,
+          migrationRequired: updated.migrationRequired,
+          scheduledChange: null,
+          lastEvent: "manual_update",
+          updatedAt: new Date()
+        },
+        $setOnInsert: {
+          createdAt: new Date()
+        }
+      },
+      { upsert: true }
+    );
+
+    return NextResponse.json(
+      {
+        type: "updated",
+        interval: updated.planInterval,
+        quantity: updated.quantity
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not update subscription in Lemon Squeezy";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }

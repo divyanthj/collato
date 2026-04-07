@@ -25,16 +25,16 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
       cache: "no-store"
     });
     const result = await readResponsePayload(response);
-    if (response.ok) {
-      setBillingStatus(result);
-      return;
+    if (!response.ok) {
+      throw new Error(result.error ?? "Could not refresh billing status");
     }
-    throw new Error(result.error ?? "Could not refresh billing status");
-  };
 
-  const redirectToCheckout = (url) => {
-    if (url) {
-      window.location.href = url;
+    setBillingStatus(result);
+    if (result?.planInterval) {
+      setInterval(result.planInterval);
+    }
+    if (typeof result?.quantity === "number" && result.quantity > 0) {
+      setQuantity(String(result.quantity));
     }
   };
 
@@ -58,19 +58,7 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
     });
   };
 
-  const handleRefreshBilling = () => {
-    setError(null);
-    startTransition(async () => {
-      try {
-        await refreshStatus();
-        router.refresh();
-      } catch (refreshError) {
-        setError(refreshError instanceof Error ? refreshError.message : "Could not refresh billing status");
-      }
-    });
-  };
-
-  const handleChangePlan = (mode = "switch_plan") => {
+  const handleChangePlan = () => {
     setError(null);
     startTransition(async () => {
       try {
@@ -80,8 +68,7 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
           body: JSON.stringify({
             organizationSlug,
             interval,
-            quantity: effectiveQuantity,
-            mode
+            quantity: effectiveQuantity
           })
         });
         const result = await readResponsePayload(response);
@@ -89,19 +76,22 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
           throw new Error(result.error ?? "Could not change plan");
         }
 
-        if (result.type === "checkout" && result.url) {
-          redirectToCheckout(result.url);
-          return;
-        }
-        if (result.type === "portal" && result.url) {
-          window.location.href = result.url;
-          return;
-        }
-
         await refreshStatus();
         router.refresh();
       } catch (changeError) {
         setError(changeError instanceof Error ? changeError.message : "Could not change plan");
+      }
+    });
+  };
+
+  const handleRefreshBilling = () => {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await refreshStatus();
+        router.refresh();
+      } catch (refreshError) {
+        setError(refreshError instanceof Error ? refreshError.message : "Could not refresh billing status");
       }
     });
   };
@@ -122,17 +112,6 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
         </div>
       </div>
 
-      {billingStatus?.migrationRequired ? (
-        <div className="alert alert-warning mt-4 text-sm">
-          <div className="flex w-full flex-wrap items-center justify-between gap-3">
-            <span>Legacy subscription detected. Migrate now to continue adding members.</span>
-            <button className="btn btn-sm btn-outline" onClick={() => handleChangePlan("migrate")} disabled={isPending}>
-              {isPending ? "Processing..." : "Migrate now"}
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-base-300 bg-base-50 p-3">
           <div className="text-xs uppercase tracking-[0.16em] text-base-content/55">Purchased seats</div>
@@ -151,7 +130,11 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
       {billingStatus?.scheduledChange ? (
         <div className="alert alert-info mt-4 text-sm">
           <span>
-            Downgrade scheduled to {billingStatus.scheduledChange.quantity} seats on {billingStatus.scheduledChange.effectiveAt ? new Date(billingStatus.scheduledChange.effectiveAt).toLocaleDateString() : "renewal"}.
+            Downgrade scheduled to {billingStatus.scheduledChange.quantity} seats on{" "}
+            {billingStatus.scheduledChange.effectiveAt
+              ? new Date(billingStatus.scheduledChange.effectiveAt).toLocaleDateString()
+              : "renewal"}
+            .
           </span>
         </div>
       ) : null}
@@ -161,7 +144,12 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
           <div className="label py-1">
             <span className="label-text">Billing interval</span>
           </div>
-          <select className="select select-bordered" value={interval} onChange={(event) => setInterval(event.target.value)} disabled={isPending || billingStatus?.migrationRequired}>
+          <select
+            className="select select-bordered"
+            value={interval}
+            onChange={(event) => setInterval(event.target.value)}
+            disabled={isPending}
+          >
             <option value="month">Monthly</option>
             <option value="year">Annual</option>
           </select>
@@ -170,13 +158,21 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
           <div className="label py-1">
             <span className="label-text">Member seats</span>
           </div>
-          <input className="input input-bordered" type="number" min={1} step={1} value={quantity} onChange={(event) => setQuantity(event.target.value)} disabled={isPending || billingStatus?.migrationRequired}/>
+          <input
+            className="input input-bordered"
+            type="number"
+            min={1}
+            step={1}
+            value={quantity}
+            onChange={(event) => setQuantity(event.target.value)}
+            disabled={isPending}
+          />
         </label>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-3">
-        <button className="btn btn-primary" onClick={() => handleChangePlan("switch_plan")} disabled={isPending || billingStatus?.migrationRequired}>
-          {isPending ? "Processing..." : hasActiveBilling ? "Manage plan" : "Start plan"}
+        <button className="btn btn-primary" onClick={handleChangePlan} disabled={isPending}>
+          {isPending ? "Processing..." : hasActiveBilling ? "Update plan" : "Start plan"}
         </button>
         <button className="btn btn-outline" onClick={handleManagePortal} disabled={isPending}>
           Manage in Lemon Squeezy
