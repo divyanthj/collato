@@ -1,6 +1,8 @@
 "use client";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { readResponsePayload } from "@/lib/client-api";
+import { VoiceInputButton } from "@/components/voice-input-button";
+import { WaveformCanvas } from "@/components/waveform-canvas";
 
 function compactText(value) {
     return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -14,9 +16,14 @@ function isPlaceholderKnowledgeText(value) {
         normalized === "a summary of everything done so far.");
 }
 export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummary, isAuthenticated }) {
+    const voiceButtonRef = useRef(null);
     const [selectedWorkspaceSlug, setSelectedWorkspaceSlug] = useState(workspaces[0]?.slug ?? "");
     const [selectedFile, setSelectedFile] = useState(null);
     const [manualNotes, setManualNotes] = useState("");
+    const [knowledgeBody, setKnowledgeBody] = useState("");
+    const [audioData, setAudioData] = useState(null);
+    const [isVoiceUsed, setIsVoiceUsed] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
     const [savedFiles, setSavedFiles] = useState(initialFiles);
     const [searchQuery, setSearchQuery] = useState("");
     const [error, setError] = useState(null);
@@ -90,34 +97,75 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
     const handleFileChange = async (file) => {
         setSelectedFile(file);
     };
+    const saveKnowledgeNote = async () => {
+        if (!selectedWorkspace || !knowledgeBody.trim()) {
+            return null;
+        }
+        const response = await fetch("/api/workspace-knowledge-notes", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                workspaceSlug: selectedWorkspace.slug,
+                body: knowledgeBody.trim(),
+                inputMethod: isVoiceUsed ? "voice" : "typed"
+            })
+        });
+        const result = await readResponsePayload(response);
+        if (!response.ok) {
+            throw new Error(result.error ?? "Could not save knowledge note");
+        }
+        return result;
+    };
     const handleSave = () => {
-        if (!selectedWorkspace || !selectedFile) {
+        if (!selectedWorkspace || (!selectedFile && !knowledgeBody.trim())) {
             return;
         }
         setError(null);
         startSaving(async () => {
             try {
-                const formData = new FormData();
-                formData.append("workspaceSlug", selectedWorkspace.slug);
-                formData.append("file", selectedFile);
-                formData.append("manualNotes", manualNotes);
-                const response = await fetch("/api/workspace-files", {
-                    method: "POST",
-                    body: formData
-                });
-                const result = await readResponsePayload(response);
-                if (!response.ok) {
-                    throw new Error(result.error ?? "Could not save file");
+                const savedEntries = [];
+                let latestSummary = null;
+                if (selectedFile) {
+                    const formData = new FormData();
+                    formData.append("workspaceSlug", selectedWorkspace.slug);
+                    formData.append("file", selectedFile);
+                    formData.append("manualNotes", manualNotes);
+                    const response = await fetch("/api/workspace-files", {
+                        method: "POST",
+                        body: formData
+                    });
+                    const result = await readResponsePayload(response);
+                    if (!response.ok) {
+                        throw new Error(result.error ?? "Could not save file");
+                    }
+                    if (result.file) {
+                        savedEntries.push(result.file);
+                    }
+                    latestSummary = result.knowledgeSummary ?? latestSummary;
                 }
-                setSavedFiles((current) => [result.file, ...current].slice(0, 8));
+                if (knowledgeBody.trim()) {
+                    const noteResult = await saveKnowledgeNote();
+                    if (noteResult?.file) {
+                        savedEntries.push(noteResult.file);
+                    }
+                    latestSummary = noteResult?.knowledgeSummary ?? latestSummary;
+                }
+                if (savedEntries.length > 0) {
+                    setSavedFiles((current) => [...savedEntries, ...current].slice(0, 8));
+                }
                 setSelectedFile(null);
                 setManualNotes("");
+                setKnowledgeBody("");
+                setAudioData(null);
+                setIsVoiceUsed(false);
                 setFileInputKey((current) => current + 1);
-                setGeneratedSummary(result.knowledgeSummary ?? null);
-                setSummaryMessage(result.knowledgeSummary ? "Workspace brief refreshed from the latest uploaded knowledge." : null);
+                setGeneratedSummary(latestSummary ?? null);
+                setSummaryMessage(latestSummary ? "Workspace brief refreshed from the latest knowledge capture." : null);
             }
             catch (saveError) {
-                setError(saveError instanceof Error ? saveError.message : "Could not save file");
+                setError(saveError instanceof Error ? saveError.message : "Could not save knowledge");
             }
         });
     };
@@ -183,19 +231,48 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
             </select>
           </label>
 
-          <label className="form-control">
-            <div className="label">
-              <span className="label-text">Choose file</span>
+          <div className="collapse collapse-arrow rounded-[1.2rem] border border-base-300 bg-base-100">
+            <input type="checkbox"/>
+            <div className="collapse-title text-sm font-semibold text-neutral">
+              Upload file (optional)
             </div>
-            <input key={fileInputKey} type="file" className="file-input file-input-bordered" onChange={(event) => void handleFileChange(event.target.files?.[0] ?? null)} disabled={!isAuthenticated || workspaces.length === 0}/>
-          </label>
+            <div className="collapse-content space-y-3">
+              <label className="form-control">
+                <div className="label">
+                  <span className="label-text">Choose file</span>
+                </div>
+                <input key={fileInputKey} type="file" className="file-input file-input-bordered" onChange={(event) => void handleFileChange(event.target.files?.[0] ?? null)} disabled={!isAuthenticated || workspaces.length === 0}/>
+              </label>
+
+              <label className="form-control">
+                <div className="label">
+                  <span className="label-text">Additional notes</span>
+                </div>
+                <textarea className="textarea textarea-bordered h-40" value={manualNotes} onChange={(event) => setManualNotes(event.target.value)} disabled={!isAuthenticated || workspaces.length === 0} placeholder="Optional: add context, what this file is for, or the key facts the team should remember."/>
+              </label>
+            </div>
+          </div>
 
           <label className="form-control">
-            <div className="label">
-              <span className="label-text">Additional notes</span>
+            <div className="label flex-wrap items-start">
+              <div>
+                <span className="label-text">Knowledge text (typed or voice)</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <VoiceInputButton ref={voiceButtonRef} onTranscript={(text) => {
+            setKnowledgeBody((current) => `${current}${current ? " " : ""}${text}`.trim());
+            setIsVoiceUsed(true);
+        }} onAudioData={setAudioData} onRecordingChange={setIsRecording}/>
+                <span className="text-xs uppercase tracking-[0.2em] text-base-content/50">Mic input</span>
+              </div>
             </div>
-            <textarea className="textarea textarea-bordered h-40" value={manualNotes} onChange={(event) => setManualNotes(event.target.value)} disabled={!isAuthenticated || workspaces.length === 0} placeholder="Optional: add context, what this file is for, or the key facts the team should remember."/>
+            <textarea className="textarea textarea-bordered h-32" value={knowledgeBody} onChange={(event) => setKnowledgeBody(event.target.value)} disabled={!isAuthenticated || workspaces.length === 0} placeholder="Paste or dictate plain text knowledge. This will be saved as a searchable knowledge item in this workspace."/>
           </label>
+
+          {isRecording ? (<div className="rounded-[1.25rem] border border-primary/20 bg-base-100 p-4">
+              <div className="text-sm font-medium text-neutral">Recording live</div>
+              <WaveformCanvas audioData={audioData} className="mt-3 h-20 w-full"/>
+            </div>) : null}
         </div>
 
         {error ? (<div className="alert alert-error mt-4 text-sm">
@@ -203,7 +280,7 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
           </div>) : null}
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!isAuthenticated || isSaving || !selectedWorkspace || !selectedFile}>
+          <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!isAuthenticated || isSaving || !selectedWorkspace || (!selectedFile && !knowledgeBody.trim())}>
             {isSaving ? "Saving..." : "Add to knowledge base"}
           </button>
           <button type="button" className="btn btn-outline" onClick={() => handleExport("csv")} disabled={filteredFiles.length === 0}>
@@ -212,7 +289,7 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
           <button type="button" className="btn btn-outline" onClick={() => handleExport("json")} disabled={filteredFiles.length === 0}>
             Export JSON
           </button>
-          <p className="text-sm leading-7 text-base-content/60">Supported text-like files are indexed automatically. Other file types can still be stored with notes until richer extraction is added.</p>
+          <p className="text-sm leading-7 text-base-content/60">Save a file, plain text, voice transcript, or any combination. All captured knowledge is searchable in this workspace.</p>
         </div>
       </div>
 
