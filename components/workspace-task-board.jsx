@@ -165,7 +165,7 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="section-kicker">Create task</p>
-              <h2 className="mt-2 text-3xl font-semibold text-neutral">Turn follow-through into a shared queue</h2>
+              <h2 className="mt-2 text-3xl font-semibold text-neutral">Turn next steps into a shared queue</h2>
               <p className="mt-3 text-sm leading-7 text-base-content/70">
                 Create explicit tasks for owners and members so the next step does not disappear inside a long update thread.
               </p>

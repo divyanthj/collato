@@ -35,6 +35,10 @@ export function CreateWorkspaceForm({ isAuthenticated, canCreateWorkspaces, owne
                 setName("");
                 setDescription("");
                 setMemberEmails("");
+                if (result?.slug) {
+                    router.push(`/dashboard/${result.slug}`);
+                    return;
+                }
                 router.refresh();
             }
             catch (createError) {
@@ -68,7 +72,7 @@ export function CreateWorkspaceForm({ isAuthenticated, canCreateWorkspaces, owne
           <div className="label">
             <span className="label-text">What is this workspace about?</span>
           </div>
-          <textarea className="textarea textarea-bordered h-28" value={description} onChange={(event) => setDescription(event.target.value)} disabled={!isAuthenticated || !canCreateWorkspaces} placeholder="Example: Delivery knowledge, field updates, and task follow-through for the Riverfront Campus workspace."/>
+          <textarea className="textarea textarea-bordered h-28" value={description} onChange={(event) => setDescription(event.target.value)} disabled={!isAuthenticated || !canCreateWorkspaces} placeholder="Example: Delivery knowledge, field updates, and shared next steps for the Riverfront Campus workspace."/>
         </label>
 
         <div className="grid gap-3 md:grid-cols-2">

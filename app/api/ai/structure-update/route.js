@@ -20,7 +20,7 @@ export const POST = auth(async (request) => {
                 content: [
                     {
                         type: "input_text",
-                        text: "You convert casual team updates into reusable workspace knowledge. Return clean JSON with a concise summary, the main key points, the concrete action items, and one sentence explaining how this update improves the knowledge base."
+                        text: "You convert casual team updates into reusable workspace knowledge. Return clean JSON with a concise summary, the main key points, up to 2 optional follow-up suggestions, and one sentence explaining how this update improves the knowledge base. Follow-ups must be lightweight and non-prescriptive; if none are clearly needed, return an empty array."
                     }
                 ]
             },
@@ -51,7 +51,8 @@ Raw update: ${rawNote}`
                         },
                         actionItems: {
                             type: "array",
-                            items: { type: "string" }
+                            items: { type: "string" },
+                            maxItems: 2
                         },
                         knowledgeContribution: { type: "string" }
                     },
@@ -60,5 +61,10 @@ Raw update: ${rawNote}`
             }
         }
     });
-    return NextResponse.json(JSON.parse(response.output_text));
+    const parsed = JSON.parse(response.output_text);
+
+    return NextResponse.json({
+        ...parsed,
+        actionItems: Array.isArray(parsed.actionItems) ? parsed.actionItems.slice(0, 2) : []
+    });
 });

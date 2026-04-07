@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { WorkspaceUpdateIntake } from "@/components/workspace-update-intake";
+import { WorkspaceSubnav } from "@/components/workspace-subnav";
 import { getWorkspaceDetailData } from "@/lib/data";
 export default async function WorkspaceUpdatesPage({ params }) {
     const session = await auth();
@@ -28,18 +28,11 @@ export default async function WorkspaceUpdatesPage({ params }) {
               <p className="section-kicker">Updates</p>
               <h1 className="mt-2 text-4xl font-semibold text-neutral">{workspace.name}</h1>
               <p className="mt-4 max-w-3xl text-base leading-8 text-base-content/72">
-                Capture typed or voice updates here and review both the verbatim submitted record and the AI-structured interpretation.
+                Capture chronological progress updates here (typed or voice). For long-term reference material, use the Knowledge tab.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link href={`/dashboard/${workspace.slug}`} className="btn btn-outline">
-                Back to hub
-              </Link>
-              <Link href={`/dashboard/${workspace.slug}/chat`} className="btn btn-outline">
-                Ask workspace
-              </Link>
-            </div>
           </div>
+          <WorkspaceSubnav workspaceSlug={workspace.slug} activeTab="updates"/>
         </div>
 
         <div className="mt-6">

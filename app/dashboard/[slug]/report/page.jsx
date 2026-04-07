@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { WorkspaceProgressReportView } from "@/components/workspace-progress-report";
+import { WorkspaceSubnav } from "@/components/workspace-subnav";
 import { getWorkspaceDetailData } from "@/lib/data";
 import { reportTemplateDefinitions } from "@/lib/report-templates";
 export default async function WorkspaceReportPage({ params }) {
@@ -29,18 +29,11 @@ export default async function WorkspaceReportPage({ params }) {
               <p className="section-kicker">Progress report</p>
               <h1 className="mt-2 text-4xl font-semibold text-neutral">{workspace.name}</h1>
               <p className="mt-4 max-w-3xl text-base leading-8 text-base-content/72">
-                Generate a clean progress summary from the workspace knowledge, captured updates, and tracked follow-through.
+                Generate a clean progress summary from the workspace knowledge, captured updates, and tracked tasks.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link href={`/dashboard/${workspace.slug}`} className="btn btn-outline">
-                Back to hub
-              </Link>
-              <Link href={`/dashboard/${workspace.slug}/chat`} className="btn btn-outline">
-                Ask workspace
-              </Link>
-            </div>
           </div>
+          <WorkspaceSubnav workspaceSlug={workspace.slug} activeTab="report"/>
         </div>
 
         <div className="mt-6">

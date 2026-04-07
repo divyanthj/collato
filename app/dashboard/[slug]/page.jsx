@@ -59,7 +59,7 @@ export default async function WorkspaceDetailPage({ params }) {
             <div className="rounded-3xl bg-base-100 p-5">
               <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Tasks</div>
               <div className="mt-3 text-lg font-semibold text-neutral">{tasks.length}</div>
-              <div className="mt-1 text-sm text-base-content/60">Open and completed follow-through</div>
+              <div className="mt-1 text-sm text-base-content/60">Open and completed tasks</div>
             </div>
           </div>
         </div>
@@ -74,7 +74,7 @@ export default async function WorkspaceDetailPage({ params }) {
                   <p className="section-kicker">Workspace actions</p>
                   <h2 className="mt-2 text-3xl font-semibold text-neutral">Go to a focused view</h2>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-base-content/68">
-                    Each workspace function lives on its own screen. Use this hub to decide whether you want to manage source material, capture what the team is seeing, ask questions, or turn action items into tracked work.
+                    Each workspace function lives on its own screen. Use this hub to decide whether you want to manage source material, capture what the team is seeing, ask questions, or turn suggested next steps into tracked work.
                   </p>
                 </div>
               </div>
@@ -130,7 +130,7 @@ export default async function WorkspaceDetailPage({ params }) {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Tasks</div>
-                      <div className="mt-2 text-xl font-semibold text-neutral">Track follow-through in one place</div>
+                      <div className="mt-2 text-xl font-semibold text-neutral">Track next steps in one place</div>
                     </div>
                     <span className="badge badge-outline">{tasks.length}</span>
                   </div>
@@ -226,16 +226,16 @@ export default async function WorkspaceDetailPage({ params }) {
                 </div>
 
                 <div className="rounded-[1.5rem] bg-base-100 p-5">
-                  <div className="text-sm font-semibold text-neutral">Open action signals</div>
+                  <div className="text-sm font-semibold text-neutral">Suggested next steps</div>
                   <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-base-content/75 marker:text-primary/70">
-                    {overview.actionItems.length > 0 ? overview.actionItems.map((item) => <li key={item}>{item}</li>) : <li>No action items extracted yet.</li>}
+                    {overview.actionItems.length > 0 ? overview.actionItems.map((item) => <li key={item}>{item}</li>) : <li>No suggested next steps yet.</li>}
                   </ul>
                 </div>
 
                 <div className="rounded-[1.5rem] bg-base-100 p-5">
                   <div className="text-sm font-semibold text-neutral">Open tasks</div>
                   <div className="mt-3 text-3xl font-semibold text-neutral">{overview.openTaskCount}</div>
-                  <div className="mt-2 text-sm text-base-content/60">Tasks still requiring follow-through.</div>
+                  <div className="mt-2 text-sm text-base-content/60">Tasks that still need attention.</div>
                 </div>
               </div>
             </div>

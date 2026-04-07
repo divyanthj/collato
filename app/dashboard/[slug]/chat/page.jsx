@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { WorkspaceChat } from "@/components/workspace-chat";
+import { WorkspaceSubnav } from "@/components/workspace-subnav";
 import { getWorkspaceChatHistory, getWorkspaceDetailData } from "@/lib/data";
 export default async function WorkspaceChatPage({ params }) {
     const session = await auth();
@@ -32,15 +32,8 @@ export default async function WorkspaceChatPage({ params }) {
                 Query the knowledge base separately when you want answers grounded in the workspace files and update history.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link href={`/dashboard/${workspace.slug}`} className="btn btn-outline">
-                Back to hub
-              </Link>
-              <Link href={`/dashboard/${workspace.slug}/knowledge`} className="btn btn-outline">
-                Go to knowledge
-              </Link>
-            </div>
           </div>
+          <WorkspaceSubnav workspaceSlug={workspace.slug} activeTab="chat"/>
         </div>
 
         <div className="mt-6">

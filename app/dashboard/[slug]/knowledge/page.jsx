@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { KnowledgeBaseManager } from "@/components/knowledge-base-manager";
+import { WorkspaceSubnav } from "@/components/workspace-subnav";
 import { getWorkspaceDetailData } from "@/lib/data";
 export default async function WorkspaceKnowledgePage({ params }) {
     const session = await auth();
@@ -23,23 +23,16 @@ export default async function WorkspaceKnowledgePage({ params }) {
     return (<main className="min-h-screen">
       <section className="mx-auto max-w-7xl px-6 pb-10 pt-8 lg:px-10">
         <div className="glass-panel rounded-[2.1rem] p-8 shadow-soft">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="section-kicker">Knowledge</p>
-              <h1 className="mt-2 text-4xl font-semibold text-neutral">{workspace.name}</h1>
-              <p className="mt-4 max-w-3xl text-base leading-8 text-base-content/72">
-                Add files and review the indexed knowledge for this workspace without the rest of the product competing for attention.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Link href={`/dashboard/${workspace.slug}`} className="btn btn-outline">
-                Back to hub
-              </Link>
-              <Link href={`/dashboard/${workspace.slug}/updates`} className="btn btn-outline">
-                Go to updates
-              </Link>
-            </div>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="section-kicker">Knowledge</p>
+                <h1 className="mt-2 text-4xl font-semibold text-neutral">{workspace.name}</h1>
+                <p className="mt-4 max-w-3xl text-base leading-8 text-base-content/72">
+                  Save reusable references here: documents, notes, transcripts, and key facts your team will come back to. For chronological progress logs, use Updates.
+                </p>
+              </div>
           </div>
+          <WorkspaceSubnav workspaceSlug={workspace.slug} activeTab="knowledge"/>
         </div>
 
         <div className="mt-6">

@@ -6,10 +6,10 @@ import { WaveformCanvas } from "@/components/waveform-canvas";
 
 const DEFAULT_UPDATE_CHANNEL = "Update";
 const ACTION_TRACKER_STATE_LABELS = {
-    active: "Active",
+    active: "Shown",
     hidden: "Hidden",
-    suppressed: "Suppressed",
-    archived: "Archived"
+    suppressed: "Muted",
+    archived: "Done"
 };
 
 export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActivityEvents = [], isAuthenticated, currentUserName, currentUserEmail }) {
@@ -90,6 +90,21 @@ export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActiv
                 .includes(normalizedQuery);
         });
     }, [savedActivityEvents, searchQuery, memberFilter, selectedWorkspace]);
+    const filteredUpdateEvents = useMemo(() => filteredActivityEvents.filter((event) => event.type === "update" && event.update), [filteredActivityEvents]);
+    const filteredTaskEvents = useMemo(() => filteredActivityEvents.filter((event) => !(event.type === "update" && event.update)), [filteredActivityEvents]);
+    const taskEventStatusSummary = useMemo(() => filteredTaskEvents.reduce((counts, event) => {
+        const status = event.statusMetadata?.taskStatus;
+        if (status === "in_progress") {
+            counts.inProgress += 1;
+        }
+        else if (status === "done") {
+            counts.done += 1;
+        }
+        else {
+            counts.open += 1;
+        }
+        return counts;
+    }, { open: 0, inProgress: 0, done: 0 }), [filteredTaskEvents]);
     const uniqueMembers = useMemo(() => [...new Set(savedActivityEvents
         .filter((event) => event.actorEmail)
         .map((event) => `${event.actorEmail}|||${event.actor}`))], [savedActivityEvents]);
@@ -269,7 +284,7 @@ export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActiv
                 throw new Error(result.error ?? "Could not update action item");
             }
             setSavedUpdates((current) => current.map((update) => update.id === result.id ? result : update));
-            setStatusMessage(`Action item marked as ${ACTION_TRACKER_STATE_LABELS[state].toLowerCase()}.`);
+            setStatusMessage(`Follow-up marked as ${ACTION_TRACKER_STATE_LABELS[state].toLowerCase()}.`);
         }
         catch (updateError) {
             setSavedUpdates(snapshot);
@@ -368,13 +383,16 @@ export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActiv
           </div>) : null}
 
         {analysis ? (<div className="mt-6 space-y-4">
-            <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4">
-              <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Verbatim submitted update</div>
-              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-base-content/75">{analysis.body}</p>
-            </div>
-
             <div className="rounded-[1.5rem] bg-secondary/35 p-4 text-sm leading-7 text-secondary-content">
               {analysis.structured.summary}
+            </div>
+
+            <div className="collapse collapse-arrow rounded-[1.5rem] bg-transparent">
+              <input type="checkbox"/>
+              <div className="collapse-title text-xs uppercase tracking-[0.24em] text-primary/60">Verbatim submitted update</div>
+              <div className="collapse-content pt-0">
+                <p className="whitespace-pre-line text-sm leading-7 text-base-content/75">{analysis.body}</p>
+              </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -386,9 +404,9 @@ export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActiv
               </div>
 
               <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4">
-                <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Action items</div>
+                <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Suggested follow-ups (optional)</div>
                 <ul className="mt-3 space-y-2 text-sm leading-6 text-base-content/75">
-                  {analysis.structured.actionItems.length > 0 ? (analysis.structured.actionItems.map((item) => <li key={item}>{item}</li>)) : (<li>No actions extracted.</li>)}
+                  {analysis.structured.actionItems.length > 0 ? (analysis.structured.actionItems.map((item) => <li key={item}>{item}</li>)) : (<li>No follow-ups suggested.</li>)}
                 </ul>
               </div>
             </div>
@@ -407,7 +425,7 @@ export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActiv
               <p className="section-kicker">Recent updates</p>
               <h3 className="mt-2 text-2xl font-semibold text-neutral">Team activity stream</h3>
             </div>
-            <div className="badge badge-outline">{filteredActivityEvents.length} shown</div>
+            <div className="badge badge-outline">{filteredUpdateEvents.length} updates</div>
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -443,62 +461,106 @@ export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActiv
             </button>
           </div>
 
-          <div className="mt-6 rounded-[1.5rem] border border-base-300 bg-base-100 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-neutral">Action tracker</div>
-                <div className="mt-1 text-sm text-base-content/60">Action signals extracted from the currently filtered updates.</div>
-              </div>
-              <div className="badge badge-outline">{filteredActionTracker.length} actions</div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <label className="form-control w-full md:max-w-xs">
-                <div className="label py-1">
-                  <span className="label-text">Action status</span>
+          <div className="collapse collapse-arrow mt-6 rounded-[1.5rem] border border-base-300 bg-base-100">
+            <input type="checkbox"/>
+            <div className="collapse-title pr-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-neutral">Suggested follow-ups</div>
+                  <div className="mt-1 text-sm text-base-content/60">Optional next steps surfaced from the currently filtered updates.</div>
                 </div>
-                <select className="select select-bordered select-sm" value={actionStateFilter} onChange={(event) => setActionStateFilter(event.target.value)}>
-                  <option value="active">Active</option>
-                  <option value="hidden">Hidden</option>
-                  <option value="suppressed">Suppressed</option>
-                  <option value="archived">Archived</option>
-                  <option value="all">All statuses</option>
-                </select>
-              </label>
+                <div className="badge badge-outline mr-4 shrink-0">{filteredActionTracker.length} suggestions</div>
+              </div>
             </div>
 
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              {filteredActionTracker.length > 0 ? (filteredActionTracker.map((item) => (<div key={item.id} className="rounded-xl bg-base-200/70 p-3">
-                    <div className="font-medium text-neutral">{item.action}</div>
-                    <div className="mt-3">
-                      <label className="form-control">
-                        <div className="label py-1">
-                          <span className="label-text text-xs uppercase tracking-[0.16em] text-base-content/55">Status</span>
+            <div className="collapse-content">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <label className="form-control w-full md:max-w-xs">
+                  <div className="label py-1">
+                    <span className="label-text">Visibility</span>
+                  </div>
+                  <select className="select select-bordered select-sm" value={actionStateFilter} onChange={(event) => setActionStateFilter(event.target.value)}>
+                    <option value="active">Shown</option>
+                    <option value="hidden">Hidden</option>
+                    <option value="suppressed">Muted</option>
+                    <option value="archived">Done</option>
+                    <option value="all">All</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-3 grid items-stretch gap-3 md:grid-cols-2">
+                {filteredActionTracker.length > 0 ? (filteredActionTracker.map((item) => (<div key={item.id} className="flex h-full flex-col rounded-xl bg-base-200/70 p-3">
+                      <div className="font-medium text-neutral">{item.action}</div>
+                      <div className="mt-auto pt-3">
+                        <label className="form-control">
+                          <div className="label py-1">
+                            <span className="label-text text-xs uppercase tracking-[0.16em] text-base-content/55">Visibility</span>
+                          </div>
+                          <select className="select select-bordered select-sm" value={item.state} onChange={(event) => {
+              void handleActionStateChange({
+                  updateId: item.updateId,
+                  workspaceSlug: item.workspaceSlug,
+                  actionKey: item.actionKey,
+                  state: event.target.value
+              });
+          }} disabled={actionStatusSavingKey === `${item.updateId}:${item.actionKey}`}>
+                            <option value="active">Shown</option>
+                            <option value="hidden">Hidden</option>
+                            <option value="suppressed">Muted</option>
+                            <option value="archived">Done</option>
+                          </select>
+                        </label>
+                        <div className="mt-2 text-sm text-base-content/65">
+                          {item.createdByName} via {item.channel} | {new Date(item.createdAt).toLocaleDateString()}
                         </div>
-                        <select className="select select-bordered select-sm" value={item.state} onChange={(event) => {
-            void handleActionStateChange({
-                updateId: item.updateId,
-                workspaceSlug: item.workspaceSlug,
-                actionKey: item.actionKey,
-                state: event.target.value
-            });
-        }} disabled={actionStatusSavingKey === `${item.updateId}:${item.actionKey}`}>
-                          <option value="active">Active</option>
-                          <option value="hidden">Hidden</option>
-                          <option value="suppressed">Suppressed</option>
-                          <option value="archived">Archived</option>
-                        </select>
-                      </label>
-                    </div>
-                    <div className="mt-2 text-sm text-base-content/65">
-                      {item.createdByName} via {item.channel} | {new Date(item.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>))) : (<div className="text-sm text-base-content/60 md:col-span-2">No action items in the current filtered view.</div>)}
+                      </div>
+                    </div>))) : (<div className="text-sm text-base-content/60 md:col-span-2">No follow-up suggestions in the current filtered view.</div>)}
+              </div>
+            </div>
+          </div>
+
+          <div className="collapse collapse-arrow mt-5 rounded-[1.5rem] border border-base-300 bg-base-100">
+            <input type="checkbox"/>
+            <div className="collapse-title pr-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-neutral">Task activity</div>
+                  <div className="mt-1 text-sm text-base-content/60">Task-created and task-change events from the current filtered view.</div>
+                </div>
+                <div className="tooltip tooltip-left shrink-0" data-tip="Open / In progress / Done">
+                  <div className="badge badge-outline mr-4 cursor-help">
+                    {taskEventStatusSummary.open}/{taskEventStatusSummary.inProgress}/{taskEventStatusSummary.done}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="collapse-content">
+              <div className="space-y-4">
+                {filteredTaskEvents.length > 0 ? (filteredTaskEvents.map((event) => (<div key={event.id} className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-neutral">{event.title}</div>
+                          <div className="text-sm text-base-content/60">
+                            {event.actor} | {new Date(event.timestamp).toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="badge badge-info badge-outline">Task</div>
+                      </div>
+                      <div className="mt-3 rounded-xl bg-base-200/70 p-3">
+                        <p className="text-sm leading-6 text-base-content/75">{event.description}</p>
+                        {event.statusMetadata?.taskStatus ? (<div className="mt-2 text-xs uppercase tracking-[0.16em] text-base-content/55">Status: {event.statusMetadata.taskStatus.replaceAll("_", " ")}</div>) : null}
+                      </div>
+                    </div>))) : (<div className="rounded-[1.25rem] border border-dashed border-base-300 p-5 text-sm text-base-content/60">
+                    No task activity in the current filtered view.
+                  </div>)}
+              </div>
             </div>
           </div>
 
           <div className="mt-5 space-y-4">
-            {filteredActivityEvents.length > 0 ? (filteredActivityEvents.map((event) => event.type === "update" && event.update ? (<div key={event.id} className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4">
+            {filteredUpdateEvents.length > 0 ? (filteredUpdateEvents.map((event) => (<div key={event.id} className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <div className="font-semibold text-neutral">{event.update.workspaceName}</div>
@@ -508,30 +570,19 @@ export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActiv
                       </div>
                       <div className="badge badge-outline">{event.update.inputMethod}</div>
                     </div>
-                    <div className="mt-3 rounded-xl bg-base-200/70 p-3">
-                      <div className="text-xs uppercase tracking-[0.18em] text-base-content/55">Verbatim update</div>
-                      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-base-content/75">{event.update.body}</p>
-                    </div>
                     <div className="mt-3 rounded-xl bg-secondary/35 p-3">
                       <div className="text-xs uppercase tracking-[0.18em] text-secondary-content/70">Summary</div>
                       <p className="mt-2 text-sm leading-6 text-secondary-content">{event.update.structured.summary}</p>
                     </div>
-                  </div>) : (<div key={event.id} className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <div className="font-semibold text-neutral">{event.title}</div>
-                        <div className="text-sm text-base-content/60">
-                          {event.actor} | {new Date(event.timestamp).toLocaleString()}
-                        </div>
+                    <div className="collapse collapse-arrow mt-3 rounded-xl bg-transparent">
+                      <input type="checkbox"/>
+                      <div className="collapse-title text-xs uppercase tracking-[0.18em] text-base-content/55">Verbatim update</div>
+                      <div className="collapse-content pt-0">
+                        <p className="whitespace-pre-line text-sm leading-6 text-base-content/75">{event.update.body}</p>
                       </div>
-                      <div className="badge badge-info badge-outline">Task</div>
-                    </div>
-                    <div className="mt-3 rounded-xl bg-base-200/70 p-3">
-                      <p className="text-sm leading-6 text-base-content/75">{event.description}</p>
-                      {event.statusMetadata?.taskStatus ? (<div className="mt-2 text-xs uppercase tracking-[0.16em] text-base-content/55">Status: {event.statusMetadata.taskStatus.replaceAll("_", " ")}</div>) : null}
                     </div>
                   </div>))) : (<div className="rounded-[1.5rem] border border-dashed border-base-300 bg-base-100 p-8 text-center text-sm leading-7 text-base-content/60">
-                No matching activity yet. Save the first member update or adjust your filters.
+                No matching updates yet. Save the first member update or adjust your filters.
               </div>)}
           </div>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { readResponsePayload } from "@/lib/client-api";
 import { VoiceInputButton } from "@/components/voice-input-button";
 import { WaveformCanvas } from "@/components/waveform-canvas";
@@ -16,6 +17,7 @@ function isPlaceholderKnowledgeText(value) {
         normalized === "a summary of everything done so far.");
 }
 export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummary, isAuthenticated }) {
+    const router = useRouter();
     const voiceButtonRef = useRef(null);
     const [selectedWorkspaceSlug, setSelectedWorkspaceSlug] = useState(workspaces[0]?.slug ?? "");
     const [selectedFile, setSelectedFile] = useState(null);
@@ -32,6 +34,8 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
     const [fileInputKey, setFileInputKey] = useState(0);
     const [generatedSummary, setGeneratedSummary] = useState(knowledgeSummary ?? null);
     const [summaryMessage, setSummaryMessage] = useState(null);
+    const [creatingTaskKey, setCreatingTaskKey] = useState(null);
+    const [createdActionKeys, setCreatedActionKeys] = useState({});
     const selectedWorkspace = useMemo(() => workspaces.find((workspace) => workspace.slug === selectedWorkspaceSlug) ?? workspaces[0], [selectedWorkspaceSlug, workspaces]);
     const filteredFiles = useMemo(() => {
         const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -202,12 +206,51 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
             }
         });
     };
+    const handleCreateTaskFromFollowThrough = (actionText, actionKey) => {
+        if (!selectedWorkspace || !actionText.trim() || !isAuthenticated) {
+            return;
+        }
+        setError(null);
+        setSummaryMessage(null);
+        setCreatingTaskKey(actionKey);
+        startSaving(async () => {
+            try {
+                const response = await fetch("/api/workspace-tasks", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        workspaceSlug: selectedWorkspace.slug,
+                        title: actionText.trim(),
+                        description: "Created from a suggested next step in Knowledge Hub."
+                    })
+                });
+                const result = await readResponsePayload(response);
+                if (!response.ok) {
+                    throw new Error(result.error ?? "Could not create task");
+                }
+                setCreatedActionKeys((current) => ({
+                    ...current,
+                    [actionKey]: true
+                }));
+                setSummaryMessage("Task created from suggested next step.");
+                router.refresh();
+            }
+            catch (taskError) {
+                setError(taskError instanceof Error ? taskError.message : "Could not create task");
+            }
+            finally {
+                setCreatingTaskKey(null);
+            }
+        });
+    };
     return (<div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="glass-panel rounded-[2rem] p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="section-kicker">Knowledge base</p>
-            <h2 className="mt-2 text-3xl font-semibold text-neutral">Add files to a workspace</h2>
+            <p className="section-kicker">Knowledge hub</p>
+            <h2 className="mt-2 text-3xl font-semibold text-neutral">Add reference knowledge</h2>
           </div>
           <div className={`badge badge-lg ${isAuthenticated ? "badge-success" : "badge-warning"}`}>
             {isAuthenticated ? "Available" : "Sign in to continue"}
@@ -215,7 +258,7 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
         </div>
 
         <p className="mt-3 max-w-xl text-sm leading-7 text-base-content/70">
-          Upload the actual file first. Text-like files are read automatically, and you can add optional notes to help the workspace interpret what matters.
+          Use this area for durable reference material your team will revisit. For day-by-day progress logs and check-ins, use Updates.
         </p>
 
         <div className="mt-6 grid gap-3">
@@ -297,8 +340,8 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
         <div className="rounded-[1.5rem] border border-primary/15 bg-primary/5 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="section-kicker">What is known</p>
-              <h3 className="mt-2 text-2xl font-semibold text-neutral">Current workspace understanding</h3>
+              <p className="section-kicker">Workspace snapshot</p>
+            <h3 className="mt-2 text-2xl font-semibold text-neutral">Current workspace snapshot</h3>
             </div>
             <div className="badge badge-outline">
               {liveKnowledgeSummary.fileCount} files / {liveKnowledgeSummary.updateCount} updates
@@ -348,13 +391,18 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
 
           {displayedSummary?.actionItems?.length ? (
             <div className="mt-5">
-              <div className="text-xs uppercase tracking-[0.2em] text-primary/60">Active follow-through</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-primary/60">Suggested next steps (optional)</div>
               <ul className="mt-3 space-y-2 text-sm leading-6 text-base-content/75">
-                {displayedSummary.actionItems.map((item) => (
-                  <li key={item} className="rounded-2xl border border-base-300 bg-base-100/80 px-4 py-3">
-                    {item}
-                  </li>
-                ))}
+                {displayedSummary.actionItems.map((item, index) => {
+            const actionKey = `${selectedWorkspace?.slug || "workspace"}-${index}-${item}`;
+            const isCreated = Boolean(createdActionKeys[actionKey]);
+            const isCreating = creatingTaskKey === actionKey;
+            return (<li key={actionKey} className="rounded-2xl border border-base-300 bg-base-100/80 px-4 py-3">
+                      <button type="button" className="tooltip w-full cursor-pointer text-left transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-60" data-tip="Turn this into a task" title="Turn this into a task" onClick={() => handleCreateTaskFromFollowThrough(item, actionKey)} disabled={!isAuthenticated || isCreated || isCreating}>
+                        {item}
+                      </button>
+                    </li>);
+        })}
               </ul>
             </div>
           ) : null}
@@ -380,7 +428,7 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
         <div className="mt-6 flex items-center justify-between gap-3">
           <div>
             <p className="section-kicker">Recent files</p>
-            <h3 className="mt-2 text-3xl font-semibold text-neutral">Latest indexed knowledge</h3>
+            <h3 className="mt-2 text-3xl font-semibold text-neutral">Recently added knowledge</h3>
           </div>
           <div className="badge badge-outline">{filteredFiles.length} shown</div>
         </div>

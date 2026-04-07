@@ -32,7 +32,7 @@ export default async function WorkspacePage() {
         {
             label: "Tasks",
             value: String(workspaces.reduce((count, workspace) => count + workspace.taskCount, 0)),
-            note: workspaces.length ? "Shared follow-through across workspaces" : "No tasks logged yet"
+            note: workspaces.length ? "Shared next steps across workspaces" : "No tasks logged yet"
         }
     ];
     if (session?.user?.email && accessGate && (accessGate.requiresCheckout || !organization)) {
