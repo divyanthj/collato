@@ -21,7 +21,9 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
   }, [quantity]);
 
   const refreshStatus = async () => {
-    const response = await fetch(`/api/billing/status?organizationSlug=${encodeURIComponent(organizationSlug)}`);
+    const response = await fetch(`/api/billing/status?organizationSlug=${encodeURIComponent(organizationSlug)}`, {
+      cache: "no-store"
+    });
     const result = await readResponsePayload(response);
     if (response.ok) {
       setBillingStatus(result);
@@ -52,6 +54,18 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
         window.location.href = result.url;
       } catch (portalError) {
         setError(portalError instanceof Error ? portalError.message : "Could not open billing portal");
+      }
+    });
+  };
+
+  const handleRefreshBilling = () => {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await refreshStatus();
+        router.refresh();
+      } catch (refreshError) {
+        setError(refreshError instanceof Error ? refreshError.message : "Could not refresh billing status");
       }
     });
   };
@@ -166,6 +180,9 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
         </button>
         <button className="btn btn-outline" onClick={handleManagePortal} disabled={isPending}>
           Manage in Lemon Squeezy
+        </button>
+        <button className="btn btn-ghost" onClick={handleRefreshBilling} disabled={isPending}>
+          Refresh billing
         </button>
       </div>
 
