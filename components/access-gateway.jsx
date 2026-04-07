@@ -104,28 +104,28 @@ export function AccessGateway({
 
   return (
     <div className="glass-panel rounded-[2.5rem] p-8 lg:p-10">
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-6">
-          <div>
-            <p className="section-kicker">Access gateway</p>
-            <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-tight text-neutral lg:text-5xl">
-              Welcome{displayName ? `, ${displayName}` : ""}. Choose how you want to enter Collato.
-            </h1>
-            <p className="mt-4 max-w-2xl text-base leading-8 text-base-content/72">
-              To access workspaces, create your own organization or join one through an invite.
-            </p>
-            <div className="mt-5">
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => signOut({ callbackUrl: "/" })}
-                disabled={isPending}
-              >
-                Sign out and switch account
-              </button>
-            </div>
-          </div>
+      <div>
+        <p className="section-kicker">Access gateway</p>
+        <h1 className="mt-3 max-w-4xl text-4xl font-semibold leading-tight text-neutral lg:text-5xl">
+          Welcome{displayName ? `, ${displayName}` : ""}. Choose how you want to enter Collato.
+        </h1>
+        <p className="mt-4 max-w-3xl text-base leading-8 text-base-content/72">
+          To access workspaces, create your own organization or join one through an invite.
+        </p>
+        <div className="mt-5">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => signOut({ callbackUrl: "/" })}
+            disabled={isPending}
+          >
+            Sign out and switch account
+          </button>
+        </div>
+      </div>
 
+      <div className="mt-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr] xl:items-start">
+        <div>
           <div id="access-gateway-billing" className="rounded-[2rem] border border-primary/15 bg-base-100 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -148,19 +148,19 @@ export function AccessGateway({
             {requiresCheckout ? (
               <div className="mt-5 grid gap-3 md:grid-cols-2">
                 <label className="form-control">
-                  <div className="label py-1">
+                  <div className="label min-h-10 py-1">
                     <span className="label-text">Billing interval</span>
                   </div>
-                  <select className="select select-bordered" value={interval} onChange={(event) => setInterval(event.target.value)} disabled={isPending}>
+                  <select className="select select-bordered h-12" value={interval} onChange={(event) => setInterval(event.target.value)} disabled={isPending}>
                     <option value="month">Monthly</option>
                     <option value="year">Annual</option>
                   </select>
                 </label>
                 <label className="form-control">
-                  <div className="label py-1">
-                    <span className="label-text">How many members are you planning to invite?</span>
+                  <div className="label min-h-10 py-1">
+                    <span className="label-text">Members to invite</span>
                   </div>
-                  <input className="input input-bordered" type="number" min={1} step={1} value={quantity} onChange={(event) => setQuantity(event.target.value)} disabled={isPending}/>
+                  <input className="input input-bordered h-12" type="number" min={1} step={1} value={quantity} onChange={(event) => setQuantity(event.target.value)} disabled={isPending}/>
                 </label>
                 <button
                   type="button"
