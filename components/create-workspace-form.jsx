@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { readResponsePayload } from "@/lib/client-api";
 export function CreateWorkspaceForm({ isAuthenticated, canCreateWorkspaces, ownerName, ownerEmail, organizationName, organizationRole }) {
     const router = useRouter();
     const [name, setName] = useState("");
@@ -8,11 +9,12 @@ export function CreateWorkspaceForm({ isAuthenticated, canCreateWorkspaces, owne
     const [memberEmails, setMemberEmails] = useState("");
     const [error, setError] = useState(null);
     const [isSaving, startSaving] = useTransition();
+
     const handleCreate = () => {
         setError(null);
         startSaving(async () => {
             try {
-                const response = await fetch("/api/dashboards", {
+                const response = await fetch("/api/workspaces", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
@@ -26,7 +28,7 @@ export function CreateWorkspaceForm({ isAuthenticated, canCreateWorkspaces, owne
                             .filter(Boolean)
                     })
                 });
-                const result = await response.json();
+                const result = await readResponsePayload(response);
                 if (!response.ok) {
                     throw new Error(result.error ?? "Could not create workspace");
                 }

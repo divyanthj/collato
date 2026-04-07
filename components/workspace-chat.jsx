@@ -1,12 +1,22 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { readResponsePayload } from "@/lib/client-api";
 function makeId() {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
-export function WorkspaceChat({ workspaces, isAuthenticated }) {
+function MarkdownAnswer({ text }) {
+    return (<div className="prose prose-sm max-w-none text-base-content prose-headings:my-2 prose-headings:text-base-content prose-p:my-2 prose-li:my-1 prose-pre:my-3 prose-pre:overflow-x-auto prose-pre:rounded-xl prose-pre:bg-neutral prose-pre:p-3 prose-pre:text-neutral-content prose-code:rounded prose-code:bg-base-300 prose-code:px-1 prose-code:py-0.5 prose-code:text-xs">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        {text}
+      </ReactMarkdown>
+    </div>);
+}
+export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticated }) {
     const [selectedWorkspaceSlug, setSelectedWorkspaceSlug] = useState(workspaces[0]?.slug ?? "");
     const [question, setQuestion] = useState("");
-    const [messages, setMessages] = useState([]);
+    const [messages, setMessages] = useState(initialMessages);
     const [error, setError] = useState(null);
     const [isStreaming, setIsStreaming] = useState(false);
     const scrollRef = useRef(null);
@@ -38,7 +48,7 @@ export function WorkspaceChat({ workspaces, isAuthenticated }) {
             }
         ]);
         try {
-            const response = await fetch("/api/ai/dashboard-chat", {
+            const response = await fetch("/api/ai/workspace-chat", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -50,13 +60,8 @@ export function WorkspaceChat({ workspaces, isAuthenticated }) {
             });
             if (!response.ok || !response.body) {
                 let message = "Could not answer question";
-                try {
-                    const result = await response.json();
-                    message = result.error ?? message;
-                }
-                catch {
-                    // Ignore JSON parse failure.
-                }
+                const result = await readResponsePayload(response);
+                message = result.error ?? message;
                 throw new Error(message);
             }
             const reader = response.body.getReader();
@@ -157,7 +162,9 @@ export function WorkspaceChat({ workspaces, isAuthenticated }) {
                   <div className="text-xs uppercase tracking-[0.18em] opacity-60">
                     {message.role === "user" ? "You" : "Knowledge base"}
                   </div>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-7">{message.text || (message.isStreaming ? "Thinking..." : "")}</p>
+                  <div className="mt-2 text-sm leading-7">
+                    {message.role === "assistant" ? (<MarkdownAnswer text={message.text || (message.isStreaming ? "Thinking..." : "")}/>) : (<p className="whitespace-pre-line">{message.text || ""}</p>)}
+                  </div>
 
                   {message.role === "assistant" && message.sources && message.sources.length > 0 ? (<div className="mt-4">
                       <div className="text-xs uppercase tracking-[0.18em] opacity-60">Sources</div>

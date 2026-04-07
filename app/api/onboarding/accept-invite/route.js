@@ -32,7 +32,8 @@ export const POST = auth(async (request) => {
     return NextResponse.json({ error: "Unsupported invite type" }, { status: 400 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not accept invite";
+    const code = error && typeof error === "object" && "code" in error ? String(error.code) : undefined;
     const status = message === "Organization not found" || message === "Workspace not found" ? 404 : 400;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message, code, upgradePath: "/dashboard/organization#billing" }, { status });
   }
 });

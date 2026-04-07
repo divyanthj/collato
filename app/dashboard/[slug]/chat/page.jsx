@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { WorkspaceChat } from "@/components/workspace-chat";
-import { getWorkspaceDetailData } from "@/lib/data";
+import { getWorkspaceChatHistory, getWorkspaceDetailData } from "@/lib/data";
 export default async function WorkspaceChatPage({ params }) {
     const session = await auth();
     if (!session?.user?.email) {
@@ -12,6 +12,7 @@ export default async function WorkspaceChatPage({ params }) {
     if (!data) {
         notFound();
     }
+    const initialMessages = await getWorkspaceChatHistory(params.slug, session.user.email);
     const { workspace, files, updates, tasks } = data;
     const workspaceSummary = {
         ...workspace,
@@ -43,7 +44,7 @@ export default async function WorkspaceChatPage({ params }) {
         </div>
 
         <div className="mt-6">
-          <WorkspaceChat workspaces={[workspaceSummary]} isAuthenticated={Boolean(session.user.email)}/>
+          <WorkspaceChat workspaces={[workspaceSummary]} initialMessages={initialMessages} isAuthenticated={Boolean(session.user.email)}/>
         </div>
       </section>
     </main>);

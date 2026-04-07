@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { getAuthorizedWorkspace, getWorkspaceChatContext } from "@/lib/data";
+import { getAuthorizedWorkspace, getWorkspaceChatContext, saveWorkspaceChatMessage } from "@/lib/data";
 import { openai } from "@/lib/openai";
 function buildFallbackFollowUps(question) {
     const trimmed = question.trim();
@@ -65,18 +65,38 @@ ${question}`
     const readableStream = new ReadableStream({
         async start(controller) {
             try {
+                let assistantText = "";
+                const sources = context.sourceLabels.slice(0, 4);
+                const followUps = buildFallbackFollowUps(question);
                 for await (const event of stream) {
                     if (event.type === "response.output_text.delta") {
+                        assistantText += event.delta;
                         controller.enqueue(encoder.encode(`${JSON.stringify({
                             type: "delta",
                             text: event.delta
                         })}\n`));
                     }
                 }
+                await saveWorkspaceChatMessage({
+                    workspaceSlug,
+                    role: "user",
+                    text: question,
+                    createdBy: request.auth.user.email,
+                    createdByName: request.auth.user.name ?? "Signed in user"
+                });
+                await saveWorkspaceChatMessage({
+                    workspaceSlug,
+                    role: "assistant",
+                    text: assistantText.trim(),
+                    sources,
+                    followUps,
+                    createdBy: request.auth.user.email,
+                    createdByName: request.auth.user.name ?? "Signed in user"
+                });
                 controller.enqueue(encoder.encode(`${JSON.stringify({
                     type: "meta",
-                    sources: context.sourceLabels.slice(0, 4),
-                    followUps: buildFallbackFollowUps(question)
+                    sources,
+                    followUps
                 })}\n`));
                 controller.close();
             }

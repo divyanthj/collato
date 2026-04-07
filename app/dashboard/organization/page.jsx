@@ -1,17 +1,23 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { OrganizationBillingManager } from "@/components/organization-billing-manager";
 import { OrganizationMemberManager } from "@/components/organization-member-manager";
+import { getBillingStatusForOrganization } from "@/lib/billing";
 import { getWorkspaceDashboardData } from "@/lib/data";
 export default async function OrganizationSettingsPage() {
     const session = await auth();
     if (!session?.user?.email) {
         redirect("/dashboard");
     }
-    const { organization, workspaces, permissions } = await getWorkspaceDashboardData(session.user.email, session.user.name);
+    const { organization, workspaces, permissions, accessGate } = await getWorkspaceDashboardData(session.user.email, session.user.name);
     if (!organization) {
         redirect("/dashboard");
     }
+    if (accessGate?.requiresCheckout) {
+        redirect("/dashboard");
+    }
+    const billingStatus = await getBillingStatusForOrganization(organization);
     const totalFiles = workspaces.reduce((count, workspace) => count + workspace.fileCount, 0);
     const totalUpdates = workspaces.reduce((count, workspace) => count + workspace.updateCount, 0);
     const totalTasks = workspaces.reduce((count, workspace) => count + workspace.taskCount, 0);
@@ -89,6 +95,22 @@ export default async function OrganizationSettingsPage() {
 
               <div className="mt-6">
                 <OrganizationMemberManager organization={organization} canManageMembers={permissions.canManageOrganizationMembers} organizationRole={permissions.organizationRole}/>
+              </div>
+            </div>
+
+            <div className="glass-panel rounded-[2rem] p-7">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="section-kicker">Billing</p>
+                  <h2 className="mt-2 text-3xl font-semibold text-neutral">Plan and seat management</h2>
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-base-content/68">
+                    Billing is organization-wide. Manage interval, seats, upgrades, downgrades, and migration here.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <OrganizationBillingManager organizationSlug={organization.slug} initialBillingStatus={billingStatus}/>
               </div>
             </div>
 

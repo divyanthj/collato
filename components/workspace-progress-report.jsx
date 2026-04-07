@@ -1,5 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
+import { readResponsePayload } from "@/lib/client-api";
 function ReportSection({ title, items, emptyLabel }) {
     return (<div className="rounded-[1.5rem] bg-base-100 p-5">
       <div className="text-sm font-semibold text-neutral">{title}</div>
@@ -43,7 +44,7 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
         setStatusMessage(null);
         startTransition(async () => {
             try {
-                const response = await fetch("/api/ai/dashboard-report", {
+                const response = await fetch("/api/ai/workspace-report", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
@@ -54,7 +55,7 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
                         clarificationAnswers: answers
                     })
                 });
-                const result = (await response.json());
+                const result = await readResponsePayload(response);
                 if (!response.ok) {
                     throw new Error("Could not generate report");
                 }

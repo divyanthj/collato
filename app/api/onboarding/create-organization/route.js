@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { assertUserCanCreateOrganization } from "@/lib/billing";
 import { createOrganization } from "@/lib/data";
 
 export const POST = auth(async (request) => {
@@ -11,6 +12,8 @@ export const POST = auth(async (request) => {
   const name = String(body.name ?? "").trim();
 
   try {
+    await assertUserCanCreateOrganization(request.auth.user.email);
+
     const organization = await createOrganization({
       name,
       ownerName: request.auth.user.name ?? "Organization owner",
@@ -20,7 +23,8 @@ export const POST = auth(async (request) => {
     return NextResponse.json(organization, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not create organization";
+    const code = error && typeof error === "object" && "code" in error ? String(error.code) : undefined;
     const status = message === "You already own an organization" ? 409 : 400;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message, code, upgradePath: "/dashboard#access-gateway-billing" }, { status });
   }
 });

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { readResponsePayload } from "@/lib/client-api";
 
 export function InviteInbox({ invites }) {
   const router = useRouter();
@@ -19,7 +20,7 @@ export function InviteInbox({ invites }) {
           body: JSON.stringify({ type: "workspace", workspaceSlug })
         });
 
-        const result = await response.json();
+        const result = await readResponsePayload(response);
         if (!response.ok) {
           throw new Error(result.error ?? "Could not accept workspace invite");
         }

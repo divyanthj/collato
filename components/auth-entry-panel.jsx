@@ -1,5 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
+import { readResponsePayload } from "@/lib/client-api";
 export function AuthEntryPanel({ mode = "hero" }) {
     const [email, setEmail] = useState("");
     const [error, setError] = useState(null);
@@ -21,7 +22,7 @@ export function AuthEntryPanel({ mode = "hero" }) {
                         redirectTo: "/dashboard"
                     })
                 });
-                const result = await response.json();
+                const result = await readResponsePayload(response);
                 if (!response.ok) {
                     throw new Error(result.error ?? "Could not send sign-in email");
                 }

@@ -3,13 +3,26 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { readResponsePayload } from "@/lib/client-api";
 
-export function AccessGateway({ displayName, suggestedOrganizationName, hasOwnedOrganization, pendingOrganizationInvites, pendingWorkspaceInvites }) {
+export function AccessGateway({
+  displayName,
+  suggestedOrganizationName,
+  hasOwnedOrganization,
+  pendingOrganizationInvites,
+  pendingWorkspaceInvites,
+  requiresCheckout = false,
+  billingStatus = null
+}) {
   const router = useRouter();
   const [organizationName, setOrganizationName] = useState(suggestedOrganizationName);
+  const [interval, setInterval] = useState("month");
+  const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [isPending, startTransition] = useTransition();
+
+  const normalizedQuantity = Number.isInteger(Number(quantity)) && Number(quantity) > 0 ? Number(quantity) : 1;
 
   const handleCreateOrganization = () => {
     setError(null);
@@ -23,7 +36,7 @@ export function AccessGateway({ displayName, suggestedOrganizationName, hasOwned
           body: JSON.stringify({ name: organizationName })
         });
 
-        const result = await response.json();
+        const result = await readResponsePayload(response);
         if (!response.ok) {
           throw new Error(result.error ?? "Could not create organization");
         }
@@ -32,6 +45,34 @@ export function AccessGateway({ displayName, suggestedOrganizationName, hasOwned
         router.refresh();
       } catch (gatewayError) {
         setError(gatewayError instanceof Error ? gatewayError.message : "Could not create organization");
+      }
+    });
+  };
+
+  const handleStartSubscription = () => {
+    setError(null);
+    setSuccessMessage(null);
+
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/billing/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            interval,
+            quantity: normalizedQuantity,
+            mode: "new_subscription"
+          })
+        });
+
+        const result = await readResponsePayload(response);
+        if (!response.ok || !result.url) {
+          throw new Error(result.error ?? "Could not start subscription");
+        }
+
+        window.location.href = result.url;
+      } catch (checkoutError) {
+        setError(checkoutError instanceof Error ? checkoutError.message : "Could not start subscription");
       }
     });
   };
@@ -48,7 +89,7 @@ export function AccessGateway({ displayName, suggestedOrganizationName, hasOwned
           body: JSON.stringify(payload)
         });
 
-        const result = await response.json();
+        const result = await readResponsePayload(response);
         if (!response.ok) {
           throw new Error(result.error ?? "Could not accept invite");
         }
@@ -85,20 +126,53 @@ export function AccessGateway({ displayName, suggestedOrganizationName, hasOwned
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-primary/15 bg-base-100 p-6">
+          <div id="access-gateway-billing" className="rounded-[2rem] border border-primary/15 bg-base-100 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Option 1</div>
-                <h2 className="mt-2 text-2xl font-semibold text-neutral">Create your own organization</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-neutral">
+                  {requiresCheckout ? "Start subscription" : "Create your own organization"}
+                </h2>
               </div>
-              <div className="badge badge-primary badge-outline">Direct access</div>
+              <div className="badge badge-primary badge-outline">
+                {billingStatus?.ownerOverrideApplied ? `Owner free access: ${billingStatus.quantity} seats` : "Direct access"}
+              </div>
             </div>
 
             <p className="mt-4 text-sm leading-7 text-base-content/70">
-              Start your own organization and begin setting up workspaces for your team.
+              {requiresCheckout
+                ? "Choose billing and seats first. After payment, return here to create your organization."
+                : "Start your own organization and begin setting up workspaces for your team."}
             </p>
 
-            <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto]">
+            {requiresCheckout ? (
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                <label className="form-control">
+                  <div className="label py-1">
+                    <span className="label-text">Billing interval</span>
+                  </div>
+                  <select className="select select-bordered" value={interval} onChange={(event) => setInterval(event.target.value)} disabled={isPending}>
+                    <option value="month">Monthly</option>
+                    <option value="year">Annual</option>
+                  </select>
+                </label>
+                <label className="form-control">
+                  <div className="label py-1">
+                    <span className="label-text">How many members are you planning to invite?</span>
+                  </div>
+                  <input className="input input-bordered" type="number" min={1} step={1} value={quantity} onChange={(event) => setQuantity(event.target.value)} disabled={isPending}/>
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-primary md:col-span-2"
+                  onClick={handleStartSubscription}
+                  disabled={isPending || normalizedQuantity < 1}
+                >
+                  {isPending ? "Redirecting..." : "Start subscription"}
+                </button>
+              </div>
+            ) : (
+              <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto]">
               <input
                 className="input input-bordered"
                 value={organizationName}
@@ -114,7 +188,8 @@ export function AccessGateway({ displayName, suggestedOrganizationName, hasOwned
               >
                 {hasOwnedOrganization ? "Organization already created" : isPending ? "Creating..." : "Create organization"}
               </button>
-            </div>
+              </div>
+            )}
           </div>
         </div>
 

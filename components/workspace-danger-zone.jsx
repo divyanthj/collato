@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { readResponsePayload } from "@/lib/client-api";
 
 export function WorkspaceDangerZone({ workspace, canDeleteWorkspace }) {
     const router = useRouter();
@@ -30,7 +31,7 @@ export function WorkspaceDangerZone({ workspace, canDeleteWorkspace }) {
                         workspaceSlug: workspace.slug
                     })
                 });
-                const result = await response.json();
+                const result = await readResponsePayload(response);
                 if (!response.ok) {
                     throw new Error(result.error ?? "Could not delete workspace");
                 }

@@ -1,14 +1,17 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { readResponsePayload } from "@/lib/client-api";
 export function OrganizationMemberManager({ organization, canManageMembers, organizationRole }) {
     const router = useRouter();
     const [memberEmail, setMemberEmail] = useState("");
     const [memberRole, setMemberRole] = useState("member");
     const [error, setError] = useState(null);
+    const [upgradePath, setUpgradePath] = useState(null);
     const [isSaving, startSaving] = useTransition();
     const handleAddMember = () => {
         setError(null);
+        setUpgradePath(null);
         startSaving(async () => {
             try {
                 const response = await fetch("/api/organization-members", {
@@ -18,8 +21,9 @@ export function OrganizationMemberManager({ organization, canManageMembers, orga
                     },
                     body: JSON.stringify({ memberEmail, role: memberRole })
                 });
-                const result = await response.json();
+                const result = await readResponsePayload(response);
                 if (!response.ok) {
+                    setUpgradePath(result.upgradePath ?? null);
                     throw new Error(result.error ?? "Could not add organization member");
                 }
                 setMemberEmail("");
@@ -66,7 +70,12 @@ export function OrganizationMemberManager({ organization, canManageMembers, orga
       </div>
 
       {error ? (<div className="alert alert-error mt-4 text-sm">
-          <span>{error}</span>
+          <div className="flex w-full flex-wrap items-center justify-between gap-3">
+            <span>{error}</span>
+            {upgradePath ? (<a href={upgradePath} className="btn btn-sm btn-outline">
+                Upgrade plan
+              </a>) : null}
+          </div>
         </div>) : null}
     </div>);
 }

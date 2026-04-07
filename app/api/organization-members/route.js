@@ -20,11 +20,16 @@ export const POST = auth(async (request) => {
     }
     catch (error) {
         const message = error instanceof Error ? error.message : "Could not add organization member";
+        const code = error && typeof error === "object" && "code" in error ? String(error.code) : undefined;
         const status = message === "Only organization owners or admins can add members"
             ? 403
             : message === "Organization not found"
                 ? 404
                 : 400;
-        return NextResponse.json({ error: message }, { status });
+        return NextResponse.json({
+            error: message,
+            code,
+            upgradePath: "/dashboard/organization#billing"
+        }, { status });
     }
 });

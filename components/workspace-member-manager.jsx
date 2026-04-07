@@ -1,16 +1,18 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { readResponsePayload } from "@/lib/client-api";
 export function WorkspaceMemberManager({ workspace, canManageMembers }) {
     const router = useRouter();
     const [memberEmail, setMemberEmail] = useState("");
     const [error, setError] = useState(null);
     const [isSaving, startSaving] = useTransition();
+
     const handleAddMember = () => {
         setError(null);
         startSaving(async () => {
             try {
-                const response = await fetch("/api/dashboard-members", {
+                const response = await fetch("/api/workspace-members", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
@@ -20,7 +22,7 @@ export function WorkspaceMemberManager({ workspace, canManageMembers }) {
                         memberEmail
                     })
                 });
-                const result = await response.json();
+                const result = await readResponsePayload(response);
                 if (!response.ok) {
                     throw new Error(result.error ?? "Could not add member");
                 }
@@ -36,7 +38,7 @@ export function WorkspaceMemberManager({ workspace, canManageMembers }) {
         setError(null);
         startSaving(async () => {
             try {
-                const response = await fetch("/api/dashboard-members", {
+                const response = await fetch("/api/workspace-members", {
                     method: "DELETE",
                     headers: {
                         "Content-Type": "application/json"
@@ -46,7 +48,7 @@ export function WorkspaceMemberManager({ workspace, canManageMembers }) {
                         memberEmail: memberEmailToRemove
                     })
                 });
-                const result = await response.json();
+                const result = await readResponsePayload(response);
                 if (!response.ok) {
                     throw new Error(result.error ?? "Could not remove member");
                 }

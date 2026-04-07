@@ -1,5 +1,6 @@
 "use client";
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
+import { readResponsePayload } from "@/lib/client-api";
 export const VoiceInputButton = forwardRef(function VoiceInputButton({ onTranscript, onAudioData, onRecordingChange }, ref) {
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
@@ -44,7 +45,7 @@ export const VoiceInputButton = forwardRef(function VoiceInputButton({ onTranscr
                 method: "POST",
                 body: formData
             });
-            const result = await response.json();
+            const result = await readResponsePayload(response);
             if (!response.ok) {
                 throw new Error(result.error ?? "Transcription failed");
             }

@@ -12,13 +12,13 @@ export default async function WorkspaceUpdatesPage({ params }) {
     if (!data) {
         notFound();
     }
-    const { workspace, files, updates, tasks } = data;
+    const { workspace, files, updates, tasks, activityEvents } = data;
     const workspaceSummary = {
         ...workspace,
         fileCount: files.length,
         updateCount: updates.length,
         taskCount: tasks.length,
-        latestActivity: updates[0]?.structured.summary
+        latestActivity: activityEvents[0]?.description || updates[0]?.structured.summary
     };
     return (<main className="min-h-screen">
       <section className="mx-auto max-w-7xl px-6 pb-10 pt-8 lg:px-10">
@@ -43,7 +43,7 @@ export default async function WorkspaceUpdatesPage({ params }) {
         </div>
 
         <div className="mt-6">
-          <WorkspaceUpdateIntake workspaces={[workspaceSummary]} initialUpdates={updates} isAuthenticated={Boolean(session.user.email)} currentUserName={session.user.name ?? "Signed in user"} currentUserEmail={session.user.email}/>
+          <WorkspaceUpdateIntake workspaces={[workspaceSummary]} initialUpdates={updates} initialActivityEvents={activityEvents} isAuthenticated={Boolean(session.user.email)} currentUserName={session.user.name ?? "Signed in user"} currentUserEmail={session.user.email}/>
         </div>
       </section>
     </main>);

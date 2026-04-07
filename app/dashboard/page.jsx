@@ -35,10 +35,18 @@ export default async function WorkspacePage() {
             note: workspaces.length ? "Shared follow-through across workspaces" : "No tasks logged yet"
         }
     ];
-    if (session?.user?.email && !organization && accessGate) {
+    if (session?.user?.email && accessGate && (accessGate.requiresCheckout || !organization)) {
         return (<main className="min-h-screen px-4 py-6 lg:px-6">
       <section className="mx-auto max-w-7xl">
-        <AccessGateway displayName={session.user.name ?? ""} suggestedOrganizationName={accessGate.suggestedOrganizationName} hasOwnedOrganization={accessGate.hasOwnedOrganization} pendingOrganizationInvites={accessGate.pendingOrganizationInvites} pendingWorkspaceInvites={accessGate.pendingWorkspaceInvites}/>
+        <AccessGateway
+          displayName={session.user.name ?? ""}
+          suggestedOrganizationName={accessGate.suggestedOrganizationName}
+          hasOwnedOrganization={accessGate.hasOwnedOrganization}
+          pendingOrganizationInvites={accessGate.pendingOrganizationInvites}
+          pendingWorkspaceInvites={accessGate.pendingWorkspaceInvites}
+          requiresCheckout={Boolean(accessGate.requiresCheckout)}
+          billingStatus={accessGate.billingStatus ?? null}
+        />
       </section>
     </main>);
     }

@@ -9,12 +9,17 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@vercel/blob": "^2.3.3",
+    "mammoth": "^1.12.0",
     "mongodb": "^7.1.0",
     "next": "^14.2.35",
     "next-auth": "^5.0.0-beta.30",
     "openai": "^6.32.0",
+    "pdf-parse": "^2.4.5",
     "react": "18.3.1",
     "react-dom": "18.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "resend": "^6.4.1"
   },
   "devDependencies": {

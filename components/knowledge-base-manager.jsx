@@ -1,30 +1,30 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
-function formatBytes(size) {
-    if (!size || Number.isNaN(size)) {
-        return "Unknown size";
-    }
-    if (size < 1024) {
-        return `${size} B`;
-    }
-    if (size < 1024 * 1024) {
-        return `${(size / 1024).toFixed(1)} KB`;
-    }
-    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+import { readResponsePayload } from "@/lib/client-api";
+
+function compactText(value) {
+    return String(value ?? "").replace(/\s+/g, " ").trim();
 }
-function looksTextBased(file) {
-    return (file.type.startsWith("text/") ||
-        ["application/json", "application/xml"].includes(file.type) ||
-        /\.(txt|md|csv|json|xml)$/i.test(file.name));
+
+function isPlaceholderKnowledgeText(value) {
+    const normalized = compactText(value).toLowerCase();
+    return (normalized === "a summary of everything done so far" ||
+        normalized === "summary of everything done so far" ||
+        normalized === "summary of everything done so far." ||
+        normalized === "a summary of everything done so far.");
 }
-export function KnowledgeBaseManager({ workspaces, initialFiles, isAuthenticated, currentUserEmail }) {
+export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummary, isAuthenticated }) {
     const [selectedWorkspaceSlug, setSelectedWorkspaceSlug] = useState(workspaces[0]?.slug ?? "");
     const [selectedFile, setSelectedFile] = useState(null);
-    const [knowledgeText, setKnowledgeText] = useState("");
+    const [manualNotes, setManualNotes] = useState("");
     const [savedFiles, setSavedFiles] = useState(initialFiles);
     const [searchQuery, setSearchQuery] = useState("");
     const [error, setError] = useState(null);
     const [isSaving, startSaving] = useTransition();
+    const [isSummarizing, startSummarizing] = useTransition();
+    const [fileInputKey, setFileInputKey] = useState(0);
+    const [generatedSummary, setGeneratedSummary] = useState(knowledgeSummary ?? null);
+    const [summaryMessage, setSummaryMessage] = useState(null);
     const selectedWorkspace = useMemo(() => workspaces.find((workspace) => workspace.slug === selectedWorkspaceSlug) ?? workspaces[0], [selectedWorkspaceSlug, workspaces]);
     const filteredFiles = useMemo(() => {
         const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -42,6 +42,27 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, isAuthenticated
                 .includes(normalizedQuery);
         });
     }, [savedFiles, searchQuery, selectedWorkspace]);
+    const relevantFiles = useMemo(() => savedFiles.filter((file) => selectedWorkspace ? file.workspaceSlug === selectedWorkspace.slug : true), [savedFiles, selectedWorkspace]);
+    const liveKnowledgeSummary = useMemo(() => {
+        const indexedFiles = relevantFiles.filter((file) => !isPlaceholderKnowledgeText(file.extractedText || file.manualNotes || file.knowledgeText || ""));
+        const knownPoints = indexedFiles
+            .slice(0, 4)
+            .map((file) => `${file.fileName}: ${file.extractionSummary || "Knowledge captured and ready for summarization."}`);
+        return {
+            overview: indexedFiles.length > 0
+                ? `${indexedFiles.length} ${indexedFiles.length === 1 ? "file is" : "files are"} ready. The saved workspace brief will refresh automatically as new knowledge is added.`
+                : knowledgeSummary?.overview ?? "No knowledge has been captured yet.",
+            knownPoints,
+            actionItems: indexedFiles.length > 0 ? ["Upload more context or updates to improve the saved workspace brief."] : [],
+            fileCount: relevantFiles.length,
+            updateCount: knowledgeSummary?.updateCount ?? 0,
+            openTaskCount: knowledgeSummary?.openTaskCount ?? 0,
+            inProgressTaskCount: knowledgeSummary?.inProgressTaskCount ?? 0,
+            doneTaskCount: knowledgeSummary?.doneTaskCount ?? 0,
+            pendingTaskHighlights: knowledgeSummary?.pendingTaskHighlights ?? []
+        };
+    }, [knowledgeSummary, relevantFiles]);
+    const displayedSummary = generatedSummary ?? liveKnowledgeSummary;
     const handleExport = (format) => {
         const exportRows = filteredFiles.map((file) => ({
             fileName: file.fileName,
@@ -68,18 +89,6 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, isAuthenticated
     };
     const handleFileChange = async (file) => {
         setSelectedFile(file);
-        if (!file) {
-            return;
-        }
-        if (looksTextBased(file)) {
-            try {
-                const text = await file.text();
-                setKnowledgeText(text.slice(0, 12000));
-            }
-            catch (fileError) {
-                console.error(fileError);
-            }
-        }
     };
     const handleSave = () => {
         if (!selectedWorkspace || !selectedFile) {
@@ -88,31 +97,60 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, isAuthenticated
         setError(null);
         startSaving(async () => {
             try {
-                const response = await fetch("/api/dashboard-files", {
+                const formData = new FormData();
+                formData.append("workspaceSlug", selectedWorkspace.slug);
+                formData.append("file", selectedFile);
+                formData.append("manualNotes", manualNotes);
+                const response = await fetch("/api/workspace-files", {
+                    method: "POST",
+                    body: formData
+                });
+                const result = await readResponsePayload(response);
+                if (!response.ok) {
+                    throw new Error(result.error ?? "Could not save file");
+                }
+                setSavedFiles((current) => [result.file, ...current].slice(0, 8));
+                setSelectedFile(null);
+                setManualNotes("");
+                setFileInputKey((current) => current + 1);
+                setGeneratedSummary(result.knowledgeSummary ?? null);
+                setSummaryMessage(result.knowledgeSummary ? "Workspace brief refreshed from the latest uploaded knowledge." : null);
+            }
+            catch (saveError) {
+                setError(saveError instanceof Error ? saveError.message : "Could not save file");
+            }
+        });
+    };
+    const handleGenerateSummary = () => {
+        if (!selectedWorkspace) {
+            return;
+        }
+        setError(null);
+        setSummaryMessage(null);
+        startSummarizing(async () => {
+            try {
+                const response = await fetch("/api/ai/workspace-knowledge-summary", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        workspaceSlug: selectedWorkspace.slug,
-                        workspaceName: selectedWorkspace.name,
-                        fileName: selectedFile.name,
-                        fileType: selectedFile.type || "Unknown",
-                        sizeLabel: formatBytes(selectedFile.size),
-                        knowledgeText,
-                        uploadedBy: currentUserEmail
+                        workspaceSlug: selectedWorkspace.slug
                     })
                 });
-                const result = await response.json();
+                const result = await readResponsePayload(response);
                 if (!response.ok) {
-                    throw new Error(result.error ?? "Could not save file");
+                    throw new Error(result.error ?? "Could not generate workspace summary");
                 }
-                setSavedFiles((current) => [result, ...current].slice(0, 8));
-                setSelectedFile(null);
-                setKnowledgeText("");
+                setGeneratedSummary(result);
+                setSummaryMessage(result.status === "insufficient_context"
+                    ? "There is not enough extracted file content yet. Re-upload supported text files or add stronger notes."
+                    : result.status === "partial_context"
+                        ? "Summary generated from the material currently available, but file extraction is still limited."
+                        : "Workspace summary generated from the uploaded knowledge.");
             }
-            catch (saveError) {
-                setError(saveError instanceof Error ? saveError.message : "Could not save file");
+            catch (summaryError) {
+                setError(summaryError instanceof Error ? summaryError.message : "Could not generate workspace summary");
             }
         });
     };
@@ -129,7 +167,7 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, isAuthenticated
         </div>
 
         <p className="mt-3 max-w-xl text-sm leading-7 text-base-content/70">
-          Store the file details together with the text or notes you want the assistant to search. For text-based files, the content is filled in automatically when possible.
+          Upload the actual file first. Text-like files are read automatically, and you can add optional notes to help the workspace interpret what matters.
         </p>
 
         <div className="mt-6 grid gap-3">
@@ -149,14 +187,14 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, isAuthenticated
             <div className="label">
               <span className="label-text">Choose file</span>
             </div>
-            <input type="file" className="file-input file-input-bordered" onChange={(event) => void handleFileChange(event.target.files?.[0] ?? null)} disabled={!isAuthenticated || workspaces.length === 0}/>
+            <input key={fileInputKey} type="file" className="file-input file-input-bordered" onChange={(event) => void handleFileChange(event.target.files?.[0] ?? null)} disabled={!isAuthenticated || workspaces.length === 0}/>
           </label>
 
           <label className="form-control">
             <div className="label">
-              <span className="label-text">Indexed text or notes</span>
+              <span className="label-text">Additional notes</span>
             </div>
-            <textarea className="textarea textarea-bordered h-40" value={knowledgeText} onChange={(event) => setKnowledgeText(event.target.value)} disabled={!isAuthenticated || workspaces.length === 0} placeholder="Paste extracted text, requirements, decisions, or a short summary of what is inside the file."/>
+            <textarea className="textarea textarea-bordered h-40" value={manualNotes} onChange={(event) => setManualNotes(event.target.value)} disabled={!isAuthenticated || workspaces.length === 0} placeholder="Optional: add context, what this file is for, or the key facts the team should remember."/>
           </label>
         </div>
 
@@ -165,7 +203,7 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, isAuthenticated
           </div>) : null}
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!isAuthenticated || isSaving || !selectedWorkspace || !selectedFile || !knowledgeText.trim()}>
+          <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!isAuthenticated || isSaving || !selectedWorkspace || !selectedFile}>
             {isSaving ? "Saving..." : "Add to knowledge base"}
           </button>
           <button type="button" className="btn btn-outline" onClick={() => handleExport("csv")} disabled={filteredFiles.length === 0}>
@@ -174,12 +212,95 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, isAuthenticated
           <button type="button" className="btn btn-outline" onClick={() => handleExport("json")} disabled={filteredFiles.length === 0}>
             Export JSON
           </button>
-          <p className="text-sm leading-7 text-base-content/60">Every saved file becomes queryable context for the workspace chatbot.</p>
+          <p className="text-sm leading-7 text-base-content/60">Supported text-like files are indexed automatically. Other file types can still be stored with notes until richer extraction is added.</p>
         </div>
       </div>
 
       <div className="glass-panel rounded-[2rem] p-6">
-        <div className="flex items-center justify-between gap-3">
+        <div className="rounded-[1.5rem] border border-primary/15 bg-primary/5 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="section-kicker">What is known</p>
+              <h3 className="mt-2 text-2xl font-semibold text-neutral">Current workspace understanding</h3>
+            </div>
+            <div className="badge badge-outline">
+              {liveKnowledgeSummary.fileCount} files / {liveKnowledgeSummary.updateCount} updates
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button type="button" className="btn btn-outline btn-sm" onClick={handleGenerateSummary} disabled={!isAuthenticated || isSummarizing || !selectedWorkspace}>
+              {isSummarizing ? "Generating summary..." : "Generate summary"}
+            </button>
+            <p className="text-sm leading-7 text-base-content/60">The workspace brief now refreshes automatically after uploads. Use this only when you want to refresh it manually.</p>
+          </div>
+
+          {summaryMessage ? (<div className="alert alert-info mt-4 text-sm">
+              <span>{summaryMessage}</span>
+            </div>) : null}
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-sm">
+              <div className="text-xs uppercase tracking-[0.18em] text-base-content/55">Open</div>
+              <div className="mt-1 text-xl font-semibold text-neutral">{displayedSummary.openTaskCount ?? 0}</div>
+            </div>
+            <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-sm">
+              <div className="text-xs uppercase tracking-[0.18em] text-base-content/55">In progress</div>
+              <div className="mt-1 text-xl font-semibold text-neutral">{displayedSummary.inProgressTaskCount ?? 0}</div>
+            </div>
+            <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-sm">
+              <div className="text-xs uppercase tracking-[0.18em] text-base-content/55">Done</div>
+              <div className="mt-1 text-xl font-semibold text-neutral">{displayedSummary.doneTaskCount ?? 0}</div>
+            </div>
+          </div>
+
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-base-content/78">
+            {displayedSummary.overview}
+          </p>
+
+          {displayedSummary.knownPoints?.length ? (
+            <div className="mt-5">
+              <div className="text-xs uppercase tracking-[0.2em] text-primary/60">Known points</div>
+              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-base-content/75 marker:text-primary/70">
+                {displayedSummary.knownPoints.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {displayedSummary?.actionItems?.length ? (
+            <div className="mt-5">
+              <div className="text-xs uppercase tracking-[0.2em] text-primary/60">Active follow-through</div>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-base-content/75">
+                {displayedSummary.actionItems.map((item) => (
+                  <li key={item} className="rounded-2xl border border-base-300 bg-base-100/80 px-4 py-3">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {displayedSummary?.pendingTaskHighlights?.length ? (
+            <div className="mt-5">
+              <div className="text-xs uppercase tracking-[0.2em] text-primary/60">Pending task highlights</div>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-base-content/75">
+                {displayedSummary.pendingTaskHighlights.map((task) => (
+                  <li key={task.id} className="rounded-2xl border border-base-300 bg-base-100/80 px-4 py-3">
+                    <div className="font-medium text-neutral">{task.title}</div>
+                    <div className="mt-1 text-xs uppercase tracking-[0.14em] text-base-content/60">
+                      {task.status.replaceAll("_", " ")} | {task.assignee || "Unassigned"}
+                      {task.dueDate ? ` | Due ${new Date(task.dueDate).toLocaleDateString()}` : ""}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-6 flex items-center justify-between gap-3">
           <div>
             <p className="section-kicker">Recent files</p>
             <h3 className="mt-2 text-3xl font-semibold text-neutral">Latest indexed knowledge</h3>
@@ -205,9 +326,24 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, isAuthenticated
                       {file.workspaceName} | {file.fileType} | {file.sizeLabel}
                     </div>
                   </div>
-                  <div className="badge badge-outline">{new Date(file.createdAt).toLocaleDateString()}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {file.extractionStatus === "extracted" ? <div className="badge badge-success badge-outline">Text extracted</div> : null}
+                    {file.extractionStatus === "ai_extracted" ? <div className="badge badge-info badge-outline">AI extracted</div> : null}
+                    {file.extractionStatus === "unsupported" ? <div className="badge badge-warning badge-outline">Notes only</div> : null}
+                    {file.extractionStatus === "legacy" ? <div className="badge badge-outline">Legacy</div> : null}
+                    <div className="badge badge-outline">{new Date(file.createdAt).toLocaleDateString()}</div>
+                  </div>
                 </div>
-                <p className="mt-3 line-clamp-4 text-sm leading-6 text-base-content/75">{file.knowledgeText}</p>
+                {file.extractionSummary ? <p className="mt-3 text-xs uppercase tracking-[0.18em] text-primary/60">{file.extractionSummary}</p> : null}
+                {file.blobUrl ? <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                    <a className="link link-primary" href={file.blobDownloadUrl || file.blobUrl} target="_blank" rel="noreferrer">
+                      Open original file
+                    </a>
+                    <span className="text-base-content/55">
+                      {file.blobAccess === "public" ? "Public blob" : "Private blob"}
+                    </span>
+                  </div> : null}
+                <p className="mt-3 line-clamp-4 text-sm leading-6 text-base-content/75">{file.extractedText || file.manualNotes || file.knowledgeText || "No searchable text captured for this file yet."}</p>
               </div>))) : (<div className="rounded-[1.5rem] border border-dashed border-base-300 bg-base-100 p-8 text-center text-sm leading-7 text-base-content/60">
               No matching knowledge files yet. Add the first file or adjust your search.
             </div>)}

@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
+import { readResponsePayload } from "@/lib/client-api";
 const TASK_COLUMNS = [
     { status: "open", label: "Open" },
     { status: "in_progress", label: "In progress" },
@@ -13,6 +14,8 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
     const [dueDate, setDueDate] = useState("");
     const [error, setError] = useState(null);
     const [statusMessage, setStatusMessage] = useState(null);
+    const [dragTaskId, setDragTaskId] = useState(null);
+    const [dropTargetStatus, setDropTargetStatus] = useState(null);
     const [isPending, startTransition] = useTransition();
     const memberDirectory = useMemo(() => workspace.members.map((member) => ({
         email: member.email,
@@ -30,7 +33,7 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
         startTransition(async () => {
             try {
                 const assignee = memberDirectory.find((member) => member.email === payload.assigneeEmail);
-                const response = await fetch("/api/dashboard-tasks", {
+                const response = await fetch("/api/workspace-tasks", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
@@ -45,7 +48,7 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
                         sourceUpdateId: payload.sourceUpdateId ?? ""
                     })
                 });
-                const result = await response.json();
+                const result = await readResponsePayload(response);
                 if (!response.ok) {
                     throw new Error(result.error ?? "Could not create task");
                 }
@@ -85,7 +88,7 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
         setStatusMessage(null);
         startTransition(async () => {
             try {
-                const response = await fetch(`/api/dashboard-tasks/${taskId}`, {
+                const response = await fetch(`/api/workspace-tasks/${taskId}`, {
                     method: "PATCH",
                     headers: {
                         "Content-Type": "application/json"
@@ -95,7 +98,7 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
                         ...updates
                     })
                 });
-                const result = await response.json();
+                const result = await readResponsePayload(response);
                 if (!response.ok) {
                     throw new Error(result.error ?? "Could not update task");
                 }
@@ -103,6 +106,56 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
             }
             catch (taskError) {
                 setError(taskError instanceof Error ? taskError.message : "Could not update task");
+            }
+        });
+    };
+    const handleTaskDrop = (taskId, nextStatus) => {
+        const taskToMove = tasks.find((task) => task.id === taskId);
+        if (!taskToMove || taskToMove.status === nextStatus) {
+            setDragTaskId(null);
+            setDropTargetStatus(null);
+            return;
+        }
+        setError(null);
+        setStatusMessage(null);
+        setTasks((current) => current.map((task) => task.id === taskId
+            ? {
+                ...task,
+                status: nextStatus,
+                completedAt: nextStatus === "done" ? new Date().toISOString() : null
+            }
+            : task));
+        startTransition(async () => {
+            try {
+                const response = await fetch(`/api/workspace-tasks/${taskId}`, {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        workspaceSlug: workspace.slug,
+                        status: nextStatus
+                    })
+                });
+                const result = await readResponsePayload(response);
+                if (!response.ok) {
+                    throw new Error(result.error ?? "Could not update task");
+                }
+                setTasks((current) => current.map((task) => (task.id === taskId ? result : task)));
+            }
+            catch (taskError) {
+                setTasks((current) => current.map((task) => task.id === taskId
+                    ? {
+                        ...task,
+                        status: taskToMove.status,
+                        completedAt: taskToMove.completedAt
+                    }
+                    : task));
+                setError(taskError instanceof Error ? taskError.message : "Could not update task");
+            }
+            finally {
+                setDragTaskId(null);
+                setDropTargetStatus(null);
             }
         });
     };
@@ -209,15 +262,38 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
         </div>
 
         <div className="mt-6 grid gap-4 xl:grid-cols-3">
-          {tasksByStatus.map((column) => (<div key={column.status} className="rounded-[1.75rem] bg-base-100 p-4">
+          {tasksByStatus.map((column) => (<div key={column.status} className={`rounded-[1.75rem] bg-base-100 p-4 transition-colors ${dropTargetStatus === column.status ? "ring-2 ring-primary/50 bg-primary/5" : ""}`} onDragOver={(event) => {
+            event.preventDefault();
+            if (dragTaskId) {
+                setDropTargetStatus(column.status);
+            }
+        }} onDragLeave={() => {
+            if (dropTargetStatus === column.status) {
+                setDropTargetStatus(null);
+            }
+        }} onDrop={(event) => {
+            event.preventDefault();
+            const taskId = event.dataTransfer.getData("text/task-id");
+            if (taskId) {
+                handleTaskDrop(taskId, column.status);
+            }
+        }}>
               <div className="flex items-center justify-between gap-3">
                 <div className="text-lg font-semibold text-neutral">{column.label}</div>
                 <div className="badge badge-outline">{column.tasks.length}</div>
               </div>
 
               <div className="mt-4 space-y-3">
-                {column.tasks.length > 0 ? (column.tasks.map((task) => (<div key={task.id} className="rounded-[1.25rem] border border-base-300 bg-base-200/50 p-4">
+                {column.tasks.length > 0 ? (column.tasks.map((task) => (<div key={task.id} className={`cursor-pointer rounded-[1.25rem] border border-base-300 bg-base-200/50 p-4 ${dragTaskId === task.id ? "opacity-60" : ""}`} draggable onDragStart={(event) => {
+            setDragTaskId(task.id);
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/task-id", task.id);
+        }} onDragEnd={() => {
+            setDragTaskId(null);
+            setDropTargetStatus(null);
+        }}>
                       <div className="font-semibold text-neutral">{task.title}</div>
+                      <div className="mt-1 text-xs uppercase tracking-[0.18em] text-base-content/50">Drag to move</div>
                       {task.description ? <p className="mt-2 text-sm leading-6 text-base-content/70">{task.description}</p> : null}
 
                       <div className="mt-3 grid gap-3">
