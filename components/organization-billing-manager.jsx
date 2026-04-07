@@ -8,14 +8,14 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
   const router = useRouter();
   const [billingStatus, setBillingStatus] = useState(initialBillingStatus);
   const [interval, setInterval] = useState(initialBillingStatus?.planInterval || "month");
-  const [quantity, setQuantity] = useState(initialBillingStatus?.quantity || Math.max(initialBillingStatus?.usedSeats || 1, 1));
+  const [quantity, setQuantity] = useState("1");
   const [error, setError] = useState(null);
   const [isPending, startTransition] = useTransition();
 
   const effectiveQuantity = useMemo(() => {
     const parsed = Number(quantity);
-    if (!Number.isFinite(parsed) || parsed < 1) {
-      return 1;
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return 0;
     }
     return Math.floor(parsed);
   }, [quantity]);
@@ -32,9 +32,6 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
     setBillingStatus(result);
     if (result?.planInterval) {
       setInterval(result.planInterval);
-    }
-    if (typeof result?.quantity === "number" && result.quantity > 0) {
-      setQuantity(String(result.quantity));
     }
   };
 
@@ -77,21 +74,10 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
         }
 
         await refreshStatus();
+        setQuantity("1");
         router.refresh();
       } catch (changeError) {
         setError(changeError instanceof Error ? changeError.message : "Could not change plan");
-      }
-    });
-  };
-
-  const handleRefreshBilling = () => {
-    setError(null);
-    startTransition(async () => {
-      try {
-        await refreshStatus();
-        router.refresh();
-      } catch (refreshError) {
-        setError(refreshError instanceof Error ? refreshError.message : "Could not refresh billing status");
       }
     });
   };
@@ -156,12 +142,12 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
         </label>
         <label className="form-control">
           <div className="label py-1">
-            <span className="label-text">Member seats</span>
+            <span className="label-text">Add seats</span>
           </div>
           <input
             className="input input-bordered"
             type="number"
-            min={1}
+            min={0}
             step={1}
             value={quantity}
             onChange={(event) => setQuantity(event.target.value)}
@@ -175,10 +161,7 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
           {isPending ? "Processing..." : hasActiveBilling ? "Update plan" : "Start plan"}
         </button>
         <button className="btn btn-outline" onClick={handleManagePortal} disabled={isPending}>
-          Manage in Lemon Squeezy
-        </button>
-        <button className="btn btn-ghost" onClick={handleRefreshBilling} disabled={isPending}>
-          Refresh billing
+          Manage Plans
         </button>
       </div>
 

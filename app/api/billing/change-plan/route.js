@@ -25,8 +25,8 @@ export async function POST(request) {
     return NextResponse.json({ error: "Invalid interval" }, { status: 400 });
   }
 
-  if (!Number.isInteger(quantity) || quantity < 1) {
-    return NextResponse.json({ error: "Quantity must be an integer greater than 0" }, { status: 400 });
+  if (!Number.isInteger(quantity) || quantity < 0) {
+    return NextResponse.json({ error: "Seats to add must be an integer 0 or greater" }, { status: 400 });
   }
 
   const organization = await resolveOrganizationForUser(session.user.email, organizationSlug);
@@ -71,7 +71,7 @@ export async function POST(request) {
     const updated = await updateLemonSubscriptionFromApp({
       subscriptionId: subscription.subscriptionId,
       interval,
-      quantity
+      quantityToAdd: quantity
     });
 
     await subscriptionsCollection.updateOne(
