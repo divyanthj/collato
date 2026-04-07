@@ -15,7 +15,7 @@ const appConfig = {
     replyTo: "support@collato.io",
   },
   lemonsqueezy: {
-    storeId: "91733",
+    storeId: 91773,
     productId: "",
     webhookPath: "/api/webhook/lemonsqueezy",
     plans: {
@@ -23,13 +23,13 @@ const appConfig = {
         key: "monthly",
         name: "Monthly",
         interval: "month",
-        variantId: "1498029",
+        variantId: 1498029,
       },
       annual: {
         key: "annual",
         name: "Annual",
         interval: "year",
-        variantId: "1498033",
+        variantId: 1498033,
       },
     },
   },
@@ -43,7 +43,7 @@ const appConfig = {
         price: 14.99,
         priceLabel: "$14.99",
         unitLabel: "per member / month",
-        variantId: "1498029",
+        variantId: 1498029,
       },
       {
         key: "annual",
@@ -53,7 +53,7 @@ const appConfig = {
         priceLabel: "$149.99",
         unitLabel: "per member / year",
         monthlyEquivalentLabel: "$12.50 per member / month",
-        variantId: "1498033",
+        variantId: 1498033,
       },
     ],
   },
