@@ -79,6 +79,10 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
           redirectToCheckout(result.url);
           return;
         }
+        if (result.type === "portal" && result.url) {
+          window.location.href = result.url;
+          return;
+        }
 
         await refreshStatus();
         router.refresh();
@@ -158,7 +162,7 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
 
       <div className="mt-4 flex flex-wrap gap-3">
         <button className="btn btn-primary" onClick={() => handleChangePlan("switch_plan")} disabled={isPending || billingStatus?.migrationRequired}>
-          {isPending ? "Processing..." : hasActiveBilling ? "Update plan" : "Start plan"}
+          {isPending ? "Processing..." : hasActiveBilling ? "Manage plan" : "Start plan"}
         </button>
         <button className="btn btn-outline" onClick={handleManagePortal} disabled={isPending}>
           Manage in Lemon Squeezy

@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { createLemonCheckoutUrl, getBillingStatusForOrganization, getSubscriptionForOrganization, resolveOrganizationForUser } from "@/lib/billing";
+import {
+  createLemonCheckoutUrl,
+  createPortalUrlFromSubscription,
+  getBillingStatusForOrganization,
+  getSubscriptionForOrganization,
+  resolveOrganizationForUser
+} from "@/lib/billing";
 import { getDatabase } from "@/lib/mongodb";
 
 export async function POST(request) {
@@ -33,6 +39,13 @@ export async function POST(request) {
 
   if (billing.migrationRequired && mode !== "migrate") {
     return NextResponse.json({ error: "Migration required before changing plan", code: "MIGRATION_REQUIRED" }, { status: 409 });
+  }
+
+  if (mode === "switch_plan" && billing.active && subscription) {
+    const portalUrl = await createPortalUrlFromSubscription(subscription);
+    if (portalUrl) {
+      return NextResponse.json({ type: "portal", url: portalUrl }, { status: 200 });
+    }
   }
 
   if (!subscription || !billing.active || mode === "new_subscription" || mode === "migrate") {
