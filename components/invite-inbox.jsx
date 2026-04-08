@@ -17,7 +17,7 @@ export function InviteInbox({ invites }) {
         const response = await fetch("/api/onboarding/accept-invite", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "workspace", workspaceSlug })
+          body: JSON.stringify({ type: "workspace-smart", workspaceSlug })
         });
 
         const result = await readResponsePayload(response);
@@ -37,7 +37,7 @@ export function InviteInbox({ invites }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-neutral">Workspace invite inbox</div>
-          <p className="mt-1 text-sm text-base-content/65">Accept the workspace seats that are waiting for you inside this organization.</p>
+          <p className="mt-1 text-sm text-base-content/65">Accept a workspace invite in one click. If your org invite is still pending, it is activated automatically first.</p>
         </div>
         <div className="badge badge-outline">{invites.length}</div>
       </div>

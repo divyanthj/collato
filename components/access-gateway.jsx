@@ -198,7 +198,7 @@ export function AccessGateway({
             <div className="text-xs uppercase tracking-[0.24em] text-secondary">Option 2</div>
             <h2 className="mt-2 text-2xl font-semibold">Wait for an invite</h2>
             <p className="mt-3 text-sm leading-7 text-neutral-content/78">
-              Invitees need an organization-level invite and a workspace-level invite before they can open workspace contents.
+              Workspace access still follows org-level and workspace-level permissions, but accepting a workspace invite will activate both when possible.
             </p>
           </div>
 
@@ -240,7 +240,7 @@ export function AccessGateway({
                   <button
                     type="button"
                     className="btn btn-outline btn-sm mt-4"
-                    onClick={() => handleAcceptInvite({ type: "workspace", workspaceSlug: invite.slug })}
+                    onClick={() => handleAcceptInvite({ type: "workspace-smart", workspaceSlug: invite.slug })}
                     disabled={isPending}
                   >
                     Accept workspace invite

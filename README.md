@@ -37,7 +37,7 @@ Then open `http://localhost:3000`.
 
 To enable email sign-in and outbound email scaffolding:
 
-- `AUTH_RESEND_KEY`
+- `RESEND_API_KEY`
 - `AUTH_RESEND_FROM`
 - `RESEND_REPLY_TO`
 - `AUTH_URL` or `NEXTAUTH_URL`
@@ -55,7 +55,7 @@ To enable email sign-in and outbound email scaffolding:
 1. Verify `resend.collato.io` as a sending domain in Resend.
 2. Add the DNS records Resend provides for SPF/DKIM/domain verification.
 3. Set `AUTH_RESEND_FROM` to a verified sender, for example `Collato.io <hello@resend.collato.io>`.
-4. Add your Resend API key to `AUTH_RESEND_KEY`.
+4. Add your Resend API key to `RESEND_API_KEY`.
 
 Reusable email helpers now live in `C:\projects\GSC raw file samples\collato\lib\resend.js`.
 The Auth.js magic-link email is also sent through that helper, so the same verified domain can be reused for future transactional mail.

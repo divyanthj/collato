@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { addOrganizationMember } from "@/lib/data";
+import { isResendConfigured, sendOrganizationInviteEmail } from "@/lib/resend";
 export const POST = auth(async (request) => {
     if (!request.auth?.user?.email) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -16,7 +17,22 @@ export const POST = auth(async (request) => {
             memberEmail,
             role: String(body.role ?? "member")
         });
-        return NextResponse.json(organization, { status: 200 });
+        let inviteEmailWarning = null;
+        if (isResendConfigured()) {
+            try {
+                await sendOrganizationInviteEmail({
+                    toEmail: memberEmail.toLowerCase(),
+                    organizationName: organization.name,
+                    inviterName: request.auth.user.name ?? "",
+                    inviterEmail: request.auth.user.email,
+                    role: String(body.role ?? "member")
+                });
+            }
+            catch (emailError) {
+                inviteEmailWarning = emailError instanceof Error ? emailError.message : "Could not send invite email";
+            }
+        }
+        return NextResponse.json(inviteEmailWarning ? { ...organization, inviteEmailWarning } : organization, { status: 200 });
     }
     catch (error) {
         const message = error instanceof Error ? error.message : "Could not add organization member";

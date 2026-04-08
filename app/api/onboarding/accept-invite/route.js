@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { acceptOrganizationInvite, acceptWorkspaceInvite } from "@/lib/data";
+import { acceptOrganizationInvite, acceptWorkspaceInvite, acceptWorkspaceInviteSmart } from "@/lib/data";
 
 export const POST = auth(async (request) => {
   if (!request.auth?.user?.email) {
@@ -27,6 +27,22 @@ export const POST = auth(async (request) => {
       });
 
       return NextResponse.json({ message: "Workspace invite accepted." }, { status: 200 });
+    }
+
+    if (type === "workspace-smart") {
+      const result = await acceptWorkspaceInviteSmart({
+        workspaceSlug: String(body.workspaceSlug ?? "").trim(),
+        userEmail: request.auth.user.email
+      });
+
+      return NextResponse.json(
+        {
+          message: result.message,
+          organizationAccepted: result.organizationAccepted,
+          workspaceAccepted: result.workspaceAccepted
+        },
+        { status: 200 }
+      );
     }
 
     return NextResponse.json({ error: "Unsupported invite type" }, { status: 400 });

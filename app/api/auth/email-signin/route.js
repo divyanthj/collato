@@ -11,7 +11,7 @@ export async function POST(request) {
     }
     if (!isResendConfigured()) {
         return NextResponse.json({
-            error: "Email sign-in is not configured yet. Add AUTH_RESEND_KEY and AUTH_RESEND_FROM to enable magic links."
+            error: "Email sign-in is not configured yet. Add RESEND_API_KEY and AUTH_RESEND_FROM to enable magic links."
         }, { status: 503 });
     }
     try {

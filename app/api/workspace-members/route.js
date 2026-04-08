@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { addWorkspaceMember, removeWorkspaceMember } from "@/lib/data";
+import { isResendConfigured, sendWorkspaceInviteEmail } from "@/lib/resend";
 export const POST = auth(async (request) => {
     if (!request.auth?.user?.email) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,7 +18,22 @@ export const POST = auth(async (request) => {
             requesterEmail: request.auth.user.email,
             memberEmail
         });
-        return NextResponse.json(workspace, { status: 200 });
+        let inviteEmailWarning = null;
+        if (isResendConfigured()) {
+            try {
+                await sendWorkspaceInviteEmail({
+                    toEmail: memberEmail.toLowerCase(),
+                    workspaceName: workspace.name,
+                    organizationName: workspace.organizationName,
+                    inviterName: request.auth.user.name ?? "",
+                    inviterEmail: request.auth.user.email
+                });
+            }
+            catch (emailError) {
+                inviteEmailWarning = emailError instanceof Error ? emailError.message : "Could not send invite email";
+            }
+        }
+        return NextResponse.json(inviteEmailWarning ? { ...workspace, inviteEmailWarning } : workspace, { status: 200 });
     }
     catch (error) {
         const message = error instanceof Error ? error.message : "Could not add member";
