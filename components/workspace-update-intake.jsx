@@ -17,6 +17,7 @@ export function WorkspaceUpdateIntake({
     workspaces,
     initialUpdates,
     initialActivityEvents = [],
+    initialNotificationPreferences = {},
     isAuthenticated,
     currentUserName,
     currentUserEmail,
@@ -40,8 +41,11 @@ export function WorkspaceUpdateIntake({
     const [actionStateFilter, setActionStateFilter] = useState("active");
     const [actionStatusSavingKey, setActionStatusSavingKey] = useState(null);
     const [privacySavingUpdateId, setPrivacySavingUpdateId] = useState(null);
+    const [notificationPreferences, setNotificationPreferences] = useState(initialNotificationPreferences);
+    const [notificationPreferenceSaving, setNotificationPreferenceSaving] = useState(false);
     const [isSubmitting, startSubmitting] = useTransition();
     const selectedWorkspace = useMemo(() => workspaces.find((workspace) => workspace.slug === selectedWorkspaceSlug) ?? workspaces[0], [selectedWorkspaceSlug, workspaces]);
+    const selectedNotificationPreference = notificationPreferences[selectedWorkspace?.slug ?? ""] ?? "immediate";
     const filteredUpdates = useMemo(() => {
         const normalizedQuery = searchQuery.trim().toLowerCase();
         return savedUpdates.filter((update) => {
@@ -120,6 +124,45 @@ export function WorkspaceUpdateIntake({
         .map((event) => `${event.actorEmail}|||${event.actor}`))], [savedActivityEvents]);
     const handleSupportFilesChange = (files) => {
         setSupportFiles(Array.from(files ?? []));
+    };
+    const handleNotificationPreferenceChange = async (nextPreference) => {
+        if (!selectedWorkspace) {
+            return;
+        }
+        setError(null);
+        setNotificationPreferenceSaving(true);
+        const previousPreference = notificationPreferences[selectedWorkspace.slug] ?? "immediate";
+        setNotificationPreferences((current) => ({
+            ...current,
+            [selectedWorkspace.slug]: nextPreference
+        }));
+        try {
+            const response = await fetch("/api/workspace-members", {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    workspaceSlug: selectedWorkspace.slug,
+                    notificationPreference: nextPreference
+                })
+            });
+            const result = await readResponsePayload(response);
+            if (!response.ok) {
+                throw new Error(result.error ?? "Could not update email notifications");
+            }
+            setStatusMessage("Email notification preference updated.");
+        }
+        catch (preferenceError) {
+            setNotificationPreferences((current) => ({
+                ...current,
+                [selectedWorkspace.slug]: previousPreference
+            }));
+            setError(preferenceError instanceof Error ? preferenceError.message : "Could not update email notifications");
+        }
+        finally {
+            setNotificationPreferenceSaving(false);
+        }
     };
     const uploadSupportingFiles = async ({ workspaceSlug, files, manualNotes }) => {
         const uploaded = await Promise.all(files.map(async (file) => {
@@ -388,6 +431,32 @@ export function WorkspaceUpdateIntake({
                 </option>))}
             </select>
           </label>
+
+          <div className="rounded-[1.25rem] border border-base-300 bg-base-100 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-neutral">Update email notifications</div>
+                <p className="mt-1 text-sm leading-6 text-base-content/65">
+                  Choose whether you get update emails right away, in a daily digest, both, or not at all for this workspace.
+                </p>
+              </div>
+              <label className="form-control w-full sm:max-w-[220px]">
+                <select
+                  className="select select-bordered select-sm"
+                  value={selectedNotificationPreference}
+                  onChange={(event) => {
+                    void handleNotificationPreferenceChange(event.target.value);
+                  }}
+                  disabled={!isAuthenticated || !selectedWorkspace || notificationPreferenceSaving}
+                >
+                  <option value="immediate">Immediate only</option>
+                  <option value="digest">Daily digest only</option>
+                  <option value="both">Immediate + digest</option>
+                  <option value="off">Off</option>
+                </select>
+              </label>
+            </div>
+          </div>
 
           <label className="form-control">
             <div className="label flex-wrap items-start">

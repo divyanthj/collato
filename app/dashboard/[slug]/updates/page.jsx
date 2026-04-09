@@ -54,6 +54,9 @@ export default async function WorkspaceUpdatesPage({ params }) {
             workspaces={[workspaceSummary]}
             initialUpdates={updates}
             initialActivityEvents={activityEvents}
+            initialNotificationPreferences={{
+              [workspace.slug]: permissions.workspaceNotificationPreference ?? "immediate"
+            }}
             isAuthenticated={Boolean(session.user.email)}
             currentUserName={session.user.name ?? "Signed in user"}
             currentUserEmail={session.user.email}

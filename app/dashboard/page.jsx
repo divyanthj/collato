@@ -46,10 +46,11 @@ export default async function WorkspacePage({ searchParams }) {
     }
     const selectedOrganizationSlug = readSearchParam(searchParams?.org);
     const orgCreated = readSearchParam(searchParams?.orgCreated) === "1";
+    const inviteAccepted = readSearchParam(searchParams?.inviteAccepted) === "1";
     const blockedWorkspaceSlug = readSearchParam(searchParams?.workspace);
     const blockedWorkspaceName = readSearchParam(searchParams?.workspaceName);
     const blockedWorkspaceReason = readSearchParam(searchParams?.workspaceReason);
-    const { organization, organizations, workspaces, permissions, accessGate, pendingWorkspaceInvites, fallbackFromGatedOrg } = await getWorkspaceDashboardData(session?.user?.email, session?.user?.name, selectedOrganizationSlug);
+    const { organization, organizations, workspaces, permissions, accessGate, pendingOrganizationInvites, pendingWorkspaceInvites, fallbackFromGatedOrg } = await getWorkspaceDashboardData(session?.user?.email, session?.user?.name, selectedOrganizationSlug);
     const organizationQuery = organization?.slug ? `?org=${encodeURIComponent(organization.slug)}` : "";
     const workspaceBlockedMessage = blockedWorkspaceSlug
         ? blockedWorkspaceReason === "subscription_required"
@@ -177,6 +178,7 @@ export default async function WorkspacePage({ searchParams }) {
             </div>
 
             {orgCreated ? <AlertBanner tone="success" className="mt-5">Your organization is ready. You are now viewing it as owner.</AlertBanner> : null}
+            {inviteAccepted ? <AlertBanner tone="success" className="mt-3">Invitation accepted. You now have access.</AlertBanner> : null}
             {postCheckoutError ? <AlertBanner tone="error" className="mt-3">{postCheckoutError}</AlertBanner> : null}
             {fallbackFromGatedOrg ? (<AlertBanner tone="success" className="mt-3">
                 {`"${fallbackFromGatedOrg.fromName}" currently requires subscription. Switched to "${fallbackFromGatedOrg.toName}".`}
@@ -227,7 +229,16 @@ export default async function WorkspacePage({ searchParams }) {
               <div className="badge badge-outline self-start sm:self-center">{workspaces.length} total</div>
             </div>
 
-            {pendingWorkspaceInvites.length > 0 ? <div className="mt-6"><InviteInbox invites={pendingWorkspaceInvites}/></div> : null}
+            {(pendingOrganizationInvites.length > 0 || pendingWorkspaceInvites.length > 0) ? (
+              <div className="mt-6">
+                <InviteInbox
+                  organizationInvites={pendingOrganizationInvites}
+                  workspaceInvites={pendingWorkspaceInvites}
+                  title="Invitation inbox"
+                  description="Accept or decline pending organization and workspace invites in one place."
+                />
+              </div>
+            ) : null}
 
             <div className="mt-6 space-y-4">
               {workspaces.length > 0 ? (workspaces.map((workspace) => (<div key={workspace.slug} className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5">

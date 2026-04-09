@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { AlertBanner } from "@/components/alert-banner";
 import { WorkspaceDangerZone } from "@/components/workspace-danger-zone";
 import { WorkspaceMemberManager } from "@/components/workspace-member-manager";
 import { resolveWorkspaceRouteForUser } from "@/lib/data";
-export default async function WorkspaceDetailPage({ params }) {
+function readSearchParam(value) {
+    if (Array.isArray(value)) {
+        return String(value[0] ?? "");
+    }
+    return typeof value === "string" ? value : "";
+}
+export default async function WorkspaceDetailPage({ params, searchParams }) {
     const session = await auth();
     if (!session?.user?.email) {
         notFound();
@@ -28,6 +35,7 @@ export default async function WorkspaceDetailPage({ params }) {
     }
     const data = resolution.data;
     const { organization, workspace, files, updates, tasks, overview, permissions } = data;
+    const inviteAccepted = readSearchParam(searchParams?.inviteAccepted) === "1";
     return (<main className="min-h-screen">
       <section className="mx-auto max-w-7xl px-6 pb-8 pt-8 lg:px-10">
         <div className="glass-panel rounded-[2.1rem] p-8 shadow-soft">
@@ -76,6 +84,7 @@ export default async function WorkspaceDetailPage({ params }) {
               <div className="mt-1 text-sm text-base-content/60">Open and completed tasks</div>
             </div>
           </div>
+          {inviteAccepted ? <AlertBanner tone="success" className="mt-6">Invitation accepted. You now have access to this workspace.</AlertBanner> : null}
         </div>
       </section>
 

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { AlertBanner } from "@/components/alert-banner";
+import { InviteInbox } from "@/components/invite-inbox";
 import { readResponsePayload } from "@/lib/client-api";
 
 export function AccessGateway({
@@ -79,31 +80,6 @@ export function AccessGateway({
         window.location.href = result.url;
       } catch (checkoutError) {
         setError(checkoutError instanceof Error ? checkoutError.message : "Could not start subscription");
-      }
-    });
-  };
-
-  const handleAcceptInvite = (payload) => {
-    setError(null);
-    setSuccessMessage(null);
-
-    startTransition(async () => {
-      try {
-        const response = await fetch("/api/onboarding/accept-invite", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        const result = await readResponsePayload(response);
-        if (!response.ok) {
-          throw new Error(result.error ?? "Could not accept invite");
-        }
-
-        setSuccessMessage(result.message ?? "Invite accepted.");
-        router.refresh();
-      } catch (inviteError) {
-        setError(inviteError instanceof Error ? inviteError.message : "Could not accept invite");
       }
     });
   };
@@ -219,54 +195,13 @@ export function AccessGateway({
               Workspace access still follows org-level and workspace-level permissions, but accepting a workspace invite will activate both when possible.
             </p>
           </div>
-
-          <div className="rounded-[2rem] border border-base-300 bg-base-100 p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-semibold text-neutral">Organization invites</div>
-              <div className="badge badge-outline">{pendingOrganizationInvites.length}</div>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {pendingOrganizationInvites.length > 0 ? pendingOrganizationInvites.map((invite) => (
-                <div key={invite.slug} className="rounded-[1.25rem] border border-base-300 p-4">
-                  <div className="font-semibold text-neutral">{invite.name}</div>
-                  <div className="mt-1 text-sm text-base-content/60">Invited by {invite.ownerName} as {invite.role}</div>
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-sm mt-4"
-                    onClick={() => handleAcceptInvite({ type: "organization", organizationSlug: invite.slug })}
-                    disabled={isPending}
-                  >
-                    Accept organization invite
-                  </button>
-                </div>
-              )) : <div className="text-sm text-base-content/60">No pending organization invites yet.</div>}
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-base-300 bg-base-100 p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-semibold text-neutral">Workspace invites</div>
-              <div className="badge badge-outline">{pendingWorkspaceInvites.length}</div>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {pendingWorkspaceInvites.length > 0 ? pendingWorkspaceInvites.map((invite) => (
-                <div key={invite.slug} className="rounded-[1.25rem] border border-base-300 p-4">
-                  <div className="font-semibold text-neutral">{invite.name}</div>
-                  <div className="mt-1 text-sm text-base-content/60">{invite.organizationName}</div>
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-sm mt-4"
-                    onClick={() => handleAcceptInvite({ type: "workspace-smart", workspaceSlug: invite.slug })}
-                    disabled={isPending}
-                  >
-                    Accept workspace invite
-                  </button>
-                </div>
-              )) : <div className="text-sm text-base-content/60">No pending workspace invites yet.</div>}
-            </div>
-          </div>
+          <InviteInbox
+            organizationInvites={pendingOrganizationInvites}
+            workspaceInvites={pendingWorkspaceInvites}
+            title="Invitation inbox"
+            description="Accept or decline pending organization and workspace invites without leaving the app."
+            className="border-base-300 bg-base-100"
+          />
         </div>
       </div>
 

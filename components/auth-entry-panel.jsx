@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
-export function AuthEntryPanel({ mode = "hero" }) {
+export function AuthEntryPanel({ mode = "hero", redirectTo = "/dashboard" }) {
     const [email, setEmail] = useState("");
     const [error, setError] = useState(null);
     const [statusMessage, setStatusMessage] = useState(null);
@@ -20,7 +20,7 @@ export function AuthEntryPanel({ mode = "hero" }) {
                     },
                     body: JSON.stringify({
                         email,
-                        redirectTo: "/dashboard"
+                        redirectTo
                     })
                 });
                 const result = await readResponsePayload(response);

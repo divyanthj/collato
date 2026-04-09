@@ -25,6 +25,7 @@ export const POST = auth(async (request) => {
                 await sendOrganizationInviteEmail({
                     toEmail: memberEmail.toLowerCase(),
                     organizationName: organization.name,
+                    organizationSlug: organization.slug,
                     inviterName: request.auth.user.name ?? "",
                     inviterEmail: request.auth.user.email,
                     role: String(body.role ?? "member")

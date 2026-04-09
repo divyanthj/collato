@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { addWorkspaceMember, removeWorkspaceMember } from "@/lib/data";
+import { addWorkspaceMember, removeWorkspaceMember, updateWorkspaceMemberNotificationPreference } from "@/lib/data";
 import { isResendConfigured, sendWorkspaceInviteEmail } from "@/lib/resend";
 export const POST = auth(async (request) => {
     if (!request.auth?.user?.email) {
@@ -25,6 +25,8 @@ export const POST = auth(async (request) => {
                     toEmail: memberEmail.toLowerCase(),
                     workspaceName: workspace.name,
                     organizationName: workspace.organizationName,
+                    workspaceSlug: workspace.slug,
+                    role: "member",
                     inviterName: request.auth.user.name ?? "",
                     inviterEmail: request.auth.user.email
                 });
@@ -69,6 +71,35 @@ export const DELETE = auth(async (request) => {
             ? 403
             : message === "Workspace not found"
                 ? 404
+                : 400;
+        return NextResponse.json({ error: message }, { status });
+    }
+});
+
+export const PATCH = auth(async (request) => {
+    if (!request.auth?.user?.email) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const body = await request.json();
+    const workspaceSlug = String(body.workspaceSlug ?? "").trim();
+    const notificationPreference = String(body.notificationPreference ?? "").trim();
+    if (!workspaceSlug || !notificationPreference) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+    try {
+        const result = await updateWorkspaceMemberNotificationPreference({
+            workspaceSlug,
+            userEmail: request.auth.user.email,
+            notificationPreference
+        });
+        return NextResponse.json(result, { status: 200 });
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : "Could not update notification preference";
+        const status = message === "Workspace not found"
+            ? 404
+            : message === "You do not have access to this workspace"
+                ? 403
                 : 400;
         return NextResponse.json({ error: message }, { status });
     }

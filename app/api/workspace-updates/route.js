@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getAuthorizedWorkspace, saveWorkspaceUpdate } from "@/lib/data";
+import { queueWorkspaceUpdateNotifications } from "@/lib/workspace-update-notifications";
 export const POST = auth(async (request) => {
     if (!request.auth?.user?.email) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -23,5 +24,11 @@ export const POST = auth(async (request) => {
         createdByName: request.auth.user.name ?? "Signed in user",
         structured: body.structured
     });
+    try {
+        await queueWorkspaceUpdateNotifications(update);
+    }
+    catch (notificationError) {
+        console.error("Failed to queue workspace update notifications:", notificationError);
+    }
     return NextResponse.json(update, { status: 201 });
 });
