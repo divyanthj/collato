@@ -60,11 +60,11 @@ export default async function WorkspacePage({ searchParams }) {
                 : `${blockedWorkspaceName || blockedWorkspaceSlug} is not available right now.`
         : "";
     const stats = [
-        { label: "Organization", value: organization?.name ?? "None yet", note: organization ? `${organization.members.length} members in the parent org` : "Sign in to create an organization" },
+        { label: "Organization", value: organization?.name ?? "None yet", note: organization ? `${organization.memberCount ?? organization.currentMembers?.length ?? organization.members.length} members in the parent org` : "Sign in to create an organization" },
         { label: "Visible workspaces", value: String(workspaces.length), note: workspaces.length ? "Workspaces you can currently access" : "No workspaces yet" },
         {
             label: "Org members",
-            value: String(organization?.members.length ?? 0),
+            value: String(organization?.memberCount ?? organization?.currentMembers?.length ?? organization?.members.length ?? 0),
             note: organization ? "People who can participate in org workspaces" : "No member graph yet"
         },
         {
@@ -251,7 +251,7 @@ export default async function WorkspacePage({ searchParams }) {
                         </Link>)}
                         <p className="mt-2 text-sm leading-6 text-base-content/70">{workspace.description}</p>
                       </div>
-                      <div className="badge badge-outline">{workspace.members.length} members</div>
+                      <div className="badge badge-outline">{workspace.memberCount ?? workspace.currentMembers?.length ?? workspace.members.length} members</div>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-3 text-sm text-base-content/60">
                       <span>{workspace.organizationName}</span>

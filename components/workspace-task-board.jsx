@@ -18,7 +18,7 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
     const [dragTaskId, setDragTaskId] = useState(null);
     const [dropTargetStatus, setDropTargetStatus] = useState(null);
     const [isPending, startTransition] = useTransition();
-    const memberDirectory = useMemo(() => workspace.members.map((member) => ({
+    const memberDirectory = useMemo(() => (workspace.activeMembers ?? workspace.currentMembers ?? workspace.members).filter((member) => member.status === "active").map((member) => ({
         email: member.email,
         name: member.email === workspace.ownerEmail
             ? workspace.ownerName

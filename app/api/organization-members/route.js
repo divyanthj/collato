@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { addOrganizationMember } from "@/lib/data";
+import { addOrganizationMember, removeOrganizationMember } from "@/lib/data";
 import { isResendConfigured, sendOrganizationInviteEmail } from "@/lib/resend";
 export const POST = auth(async (request) => {
     if (!request.auth?.user?.email) {
@@ -16,6 +16,7 @@ export const POST = auth(async (request) => {
         const organization = await addOrganizationMember({
             organizationSlug,
             requesterEmail: request.auth.user.email,
+            requesterName: request.auth.user.name ?? "",
             memberEmail,
             role: String(body.role ?? "member")
         });
@@ -50,5 +51,37 @@ export const POST = auth(async (request) => {
             code,
             upgradePath: "/dashboard/organization#billing"
         }, { status });
+    }
+});
+
+export const DELETE = auth(async (request) => {
+    if (!request.auth?.user?.email) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const body = await request.json();
+    const organizationSlug = String(body.organizationSlug ?? "").trim();
+    const memberEmail = String(body.memberEmail ?? "").trim();
+    if (!organizationSlug || !memberEmail) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+    try {
+        const organization = await removeOrganizationMember({
+            organizationSlug,
+            requesterEmail: request.auth.user.email,
+            requesterName: request.auth.user.name ?? "",
+            memberEmail
+        });
+        return NextResponse.json(organization, { status: 200 });
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : "Could not remove organization member";
+        const status = message === "Only organization owners can remove members"
+            ? 403
+            : message === "Organization not found"
+                ? 404
+                : message === "Organization member not found"
+                    ? 404
+                : 400;
+        return NextResponse.json({ error: message }, { status });
     }
 });

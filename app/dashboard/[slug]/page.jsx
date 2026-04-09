@@ -65,7 +65,7 @@ export default async function WorkspaceDetailPage({ params, searchParams }) {
             </div>
             <div className="rounded-3xl bg-base-100 p-5">
               <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Members</div>
-              <div className="mt-3 text-lg font-semibold text-neutral">{workspace.members.length}</div>
+              <div className="mt-3 text-lg font-semibold text-neutral">{workspace.memberCount ?? workspace.currentMembers?.length ?? workspace.members.length}</div>
               <div className="mt-1 text-sm text-base-content/60">Owner plus invited teammates</div>
             </div>
             <div className="rounded-3xl bg-base-100 p-5">
@@ -199,11 +199,11 @@ export default async function WorkspaceDetailPage({ params, searchParams }) {
                   <p className="section-kicker">Members</p>
                   <h2 className="mt-2 text-3xl font-semibold text-neutral">Who is inside this workspace</h2>
                 </div>
-                <div className="badge badge-outline">{workspace.members.length} people</div>
+                <div className="badge badge-outline">{workspace.memberCount ?? workspace.currentMembers?.length ?? workspace.members.length} people</div>
               </div>
 
               <div className="mt-6 space-y-3">
-                {workspace.members.map((member) => (<div key={member.email} className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4">
+                {(workspace.currentMembers ?? workspace.members).map((member) => (<div key={`${member.email}-${member.status}`} className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="font-semibold text-neutral">{member.email}</div>
                       <div className="flex gap-2">

@@ -8,6 +8,8 @@ export function WorkspaceMemberManager({ workspace, canManageMembers }) {
     const [memberEmail, setMemberEmail] = useState("");
     const [error, setError] = useState(null);
     const [isSaving, startSaving] = useTransition();
+    const currentMembers = workspace.currentMembers ?? workspace.members ?? [];
+    const formatDate = (value) => value ? new Date(value).toLocaleDateString() : "Unknown";
 
     const handleAddMember = () => {
         setError(null);
@@ -72,7 +74,7 @@ export function WorkspaceMemberManager({ workspace, canManageMembers }) {
       </div>
 
       <div className="mt-4 space-y-3">
-        {workspace.members.map((member) => (<div key={member.email} className="rounded-[1.25rem] border border-base-300 bg-base-50 p-4">
+        {currentMembers.map((member) => (<div key={`${member.email}-${member.status}`} className="rounded-[1.25rem] border border-base-300 bg-base-50 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="font-semibold text-neutral">{member.email}</div>
               <div className="flex flex-wrap items-center gap-2">
@@ -82,6 +84,9 @@ export function WorkspaceMemberManager({ workspace, canManageMembers }) {
                     Remove
                   </button>) : null}
               </div>
+            </div>
+            <div className="mt-2 text-xs text-base-content/55">
+              {member.joinedAt ? `Joined ${formatDate(member.joinedAt)}` : member.invitedAt ? `Invited ${formatDate(member.invitedAt)}` : "No membership timestamp yet"}
             </div>
           </div>))}
       </div>

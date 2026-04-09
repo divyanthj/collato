@@ -16,6 +16,7 @@ export const POST = auth(async (request) => {
         const workspace = await addWorkspaceMember({
             workspaceSlug,
             requesterEmail: request.auth.user.email,
+            requesterName: request.auth.user.name ?? "",
             memberEmail
         });
         let inviteEmailWarning = null;
@@ -61,6 +62,7 @@ export const DELETE = auth(async (request) => {
         const workspace = await removeWorkspaceMember({
             workspaceSlug,
             requesterEmail: request.auth.user.email,
+            requesterName: request.auth.user.name ?? "",
             memberEmail
         });
         return NextResponse.json(workspace, { status: 200 });
@@ -71,6 +73,8 @@ export const DELETE = auth(async (request) => {
             ? 403
             : message === "Workspace not found"
                 ? 404
+                : message === "Workspace member not found"
+                    ? 404
                 : 400;
         return NextResponse.json({ error: message }, { status });
     }

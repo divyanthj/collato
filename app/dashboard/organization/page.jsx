@@ -75,7 +75,7 @@ export default async function OrganizationSettingsPage({ searchParams }) {
             </div>
             <div className="rounded-3xl bg-base-100 p-5">
               <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Members</div>
-              <div className="mt-3 text-3xl font-semibold text-neutral">{organization.members.length}</div>
+              <div className="mt-3 text-3xl font-semibold text-neutral">{organization.memberCount ?? organization.currentMembers?.length ?? organization.members.length}</div>
               <div className="mt-1 text-sm text-base-content/60">Can participate in org workspaces</div>
             </div>
             <div className="rounded-3xl bg-base-100 p-5">
@@ -189,7 +189,7 @@ export default async function OrganizationSettingsPage({ searchParams }) {
                             </Link>)}
                           <p className="mt-2 text-sm leading-6 text-base-content/70">{workspace.description}</p>
                         </div>
-                        <div className="badge badge-outline">{workspace.members.length} members</div>
+                        <div className="badge badge-outline">{workspace.memberCount ?? workspace.currentMembers?.length ?? workspace.members.length} members</div>
                       </div>
                       <div className="mt-4 flex flex-wrap gap-3 text-sm text-base-content/60">
                         <span>{workspace.fileCount} files</span>
