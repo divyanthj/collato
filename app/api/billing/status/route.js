@@ -28,7 +28,12 @@ export async function GET(request) {
         scheduledChange: billingStatus.scheduledChange,
         currentPeriodEnd: billingStatus.currentPeriodEnd,
         source: billingStatus.source,
-        ownerOverrideApplied: billingStatus.ownerOverrideApplied
+        ownerOverrideApplied: billingStatus.ownerOverrideApplied,
+        canonicalSubscription: billingStatus.canonicalSubscription ?? null,
+        subscriptionHistory: billingStatus.subscriptionHistory ?? [],
+        hasMultipleActiveSubscriptions: Boolean(billingStatus.hasMultipleActiveSubscriptions),
+        canMutateSafely: billingStatus.canMutateSafely ?? true,
+        billingStateMessage: billingStatus.billingStateMessage ?? ""
       },
       { status: 200 }
     );
@@ -52,7 +57,12 @@ export async function GET(request) {
       scheduledChange: billing.scheduledChange,
       currentPeriodEnd: billing.currentPeriodEnd,
       source: billing.source,
-      ownerOverrideApplied: billing.ownerOverrideApplied
+      ownerOverrideApplied: billing.ownerOverrideApplied,
+      canonicalSubscription: billing.canonicalSubscription ?? null,
+      subscriptionHistory: billing.subscriptionHistory ?? [],
+      hasMultipleActiveSubscriptions: Boolean(billing.hasMultipleActiveSubscriptions),
+      canMutateSafely: billing.canMutateSafely ?? true,
+      billingStateMessage: billing.billingStateMessage ?? ""
     },
     { status: 200 }
   );

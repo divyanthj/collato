@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
+import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 const TASK_COLUMNS = [
     { status: "open", label: "Open" },
@@ -212,13 +213,9 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
             </div>
           </div>
 
-          {error ? (<div className="alert alert-error mt-4 text-sm">
-              <span>{error}</span>
-            </div>) : null}
+          {error ? <AlertBanner tone="error" className="mt-4">{error}</AlertBanner> : null}
 
-          {statusMessage ? (<div className="alert alert-success mt-4 text-sm">
-              <span>{statusMessage}</span>
-            </div>) : null}
+          {statusMessage ? <AlertBanner tone="success" className="mt-4">{statusMessage}</AlertBanner> : null}
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <button type="button" className="btn btn-primary" onClick={handleCreateTask} disabled={isPending || !title.trim()}>

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 function makeId() {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -191,9 +192,7 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
         </div>
       </div>
 
-      {error ? (<div className="alert alert-error mt-4 text-sm">
-          <span>{error}</span>
-        </div>) : null}
+      {error ? <AlertBanner tone="error" className="mt-4">{error}</AlertBanner> : null}
 
       <div className="mt-6 grid gap-3">
         <label className="form-control">

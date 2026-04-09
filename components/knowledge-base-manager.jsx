@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 import { VoiceInputButton } from "@/components/voice-input-button";
 import { WaveformCanvas } from "@/components/waveform-canvas";
@@ -16,7 +17,13 @@ function isPlaceholderKnowledgeText(value) {
         normalized === "summary of everything done so far." ||
         normalized === "a summary of everything done so far.");
 }
-export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummary, isAuthenticated }) {
+export function KnowledgeBaseManager({
+    workspaces,
+    initialFiles,
+    knowledgeSummary,
+    isAuthenticated,
+    canManageAiPrivacy = false
+}) {
     const router = useRouter();
     const voiceButtonRef = useRef(null);
     const [selectedWorkspaceSlug, setSelectedWorkspaceSlug] = useState(workspaces[0]?.slug ?? "");
@@ -36,6 +43,7 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
     const [summaryMessage, setSummaryMessage] = useState(null);
     const [creatingTaskKey, setCreatingTaskKey] = useState(null);
     const [createdActionKeys, setCreatedActionKeys] = useState({});
+    const [privacySavingFileId, setPrivacySavingFileId] = useState(null);
     const selectedWorkspace = useMemo(() => workspaces.find((workspace) => workspace.slug === selectedWorkspaceSlug) ?? workspaces[0], [selectedWorkspaceSlug, workspaces]);
     const filteredFiles = useMemo(() => {
         const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -245,6 +253,43 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
             }
         });
     };
+    const handleFileAiPrivacyToggle = (file, nextValue) => {
+        if (!canManageAiPrivacy) {
+            return;
+        }
+        setError(null);
+        setPrivacySavingFileId(file.id);
+        startSaving(async () => {
+            try {
+                const response = await fetch(`/api/workspace-files/${file.id}`, {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        workspaceSlug: file.workspaceSlug,
+                        aiPrivate: nextValue
+                    })
+                });
+                const result = await readResponsePayload(response);
+                if (!response.ok) {
+                    throw new Error(result.error ?? "Could not update AI privacy");
+                }
+                setSavedFiles((current) => current.map((item) => item.id === result.id ? result : item));
+                setGeneratedSummary(null);
+                setSummaryMessage(nextValue
+                    ? "This item is now excluded from AI context."
+                    : "This item is now available to AI again.");
+                router.refresh();
+            }
+            catch (privacyError) {
+                setError(privacyError instanceof Error ? privacyError.message : "Could not update AI privacy");
+            }
+            finally {
+                setPrivacySavingFileId(null);
+            }
+        });
+    };
     return (<div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="glass-panel rounded-[2rem] p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -318,9 +363,7 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
             </div>) : null}
         </div>
 
-        {error ? (<div className="alert alert-error mt-4 text-sm">
-            <span>{error}</span>
-          </div>) : null}
+        {error ? <AlertBanner tone="error" className="mt-4">{error}</AlertBanner> : null}
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!isAuthenticated || isSaving || !selectedWorkspace || (!selectedFile && !knowledgeBody.trim())}>
@@ -452,6 +495,16 @@ export function KnowledgeBaseManager({ workspaces, initialFiles, knowledgeSummar
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    {canManageAiPrivacy ? (<label className="label cursor-pointer gap-2 py-0">
+                        <span className="label-text text-xs">Private from AI</span>
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-sm"
+                          checked={Boolean(file.aiPrivate)}
+                          onChange={(event) => handleFileAiPrivacyToggle(file, event.target.checked)}
+                          disabled={privacySavingFileId === file.id}
+                        />
+                      </label>) : null}
                     {file.extractionStatus === "extracted" ? <div className="badge badge-success badge-outline">Text extracted</div> : null}
                     {file.extractionStatus === "ai_extracted" ? <div className="badge badge-info badge-outline">AI extracted</div> : null}
                     {file.extractionStatus === "unsupported" ? <div className="badge badge-warning badge-outline">Notes only</div> : null}

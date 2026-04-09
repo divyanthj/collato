@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 
 export function InviteInbox({ invites }) {
@@ -54,7 +55,7 @@ export function InviteInbox({ invites }) {
         ))}
       </div>
 
-      {error ? <div className="alert alert-error mt-4 text-sm"><span>{error}</span></div> : null}
+      {error ? <AlertBanner tone="error" className="mt-4">{error}</AlertBanner> : null}
     </div>
   );
 }

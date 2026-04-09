@@ -77,11 +77,14 @@ export async function POST(request) {
     attributes?.first_order_item?.variant_id ??
     null;
   const quantity = parseQuantity(attributes, payload);
-  const customerEmail =
-    attributes?.user_email ??
-    attributes?.customer_email ??
+  const appUserEmail =
     payload?.meta?.custom_data?.userEmail ??
     payload?.meta?.custom_data?.user_email ??
+    "";
+  const customerEmail =
+    appUserEmail ??
+    attributes?.user_email ??
+    attributes?.customer_email ??
     "";
   const customerId = attributes?.customer_id ? String(attributes.customer_id) : "";
   const organizationSlug =
@@ -93,6 +96,30 @@ export async function POST(request) {
   const planInterval = variantMeta.planInterval;
 
   if (data?.type === "subscriptions" && data?.id) {
+    const existingSubscription = await subscriptionsCollection.findOne({ subscriptionId: String(data.id) });
+    const renewalDate = attributes?.renews_at ? new Date(String(attributes.renews_at)) : null;
+    const endsDate = attributes?.ends_at ? new Date(String(attributes.ends_at)) : null;
+    const isCancelledStatus = String(attributes?.status || "").toLowerCase() === "cancelled";
+    const scheduledChange =
+      isCancelledStatus && renewalDate
+        ? {
+            type: "cancel_at_period_end",
+            effectiveAt: renewalDate.toISOString(),
+            quantity
+          }
+        : null;
+    const existingScheduledChange = existingSubscription?.scheduledChange || null;
+    const existingScheduledEffectiveAt = existingScheduledChange?.effectiveAt
+      ? new Date(String(existingScheduledChange.effectiveAt)).getTime()
+      : 0;
+    const hasFutureManualSeatDowngrade =
+      existingScheduledChange?.type === "seat_downgrade_at_renewal" &&
+      Number.isFinite(existingScheduledEffectiveAt) &&
+      existingScheduledEffectiveAt > Date.now();
+    const mergedScheduledChange = variantMeta.migrationRequired
+      ? null
+      : scheduledChange || (hasFutureManualSeatDowngrade ? existingScheduledChange : null);
+
     const subscriptionSet = {
       subscriptionId: String(data.id),
       status: attributes?.status || "unknown",
@@ -101,22 +128,19 @@ export async function POST(request) {
       quantity,
       subscriptionItemId: attributes?.first_subscription_item?.id ? String(attributes.first_subscription_item.id) : "",
       customerEmail: String(customerEmail || ""),
+      appUserEmail: String(appUserEmail || ""),
       customerId,
       orderId: attributes?.order_id ? String(attributes.order_id) : "",
-      renewsAt: attributes?.renews_at ? new Date(String(attributes.renews_at)) : null,
-      endsAt: attributes?.ends_at ? new Date(String(attributes.ends_at)) : null,
-      currentPeriodEnd: attributes?.renews_at ? new Date(String(attributes.renews_at)) : null,
+      renewsAt: renewalDate,
+      endsAt: endsDate,
+      currentPeriodEnd: renewalDate,
       portalUrl: attributes?.urls?.customer_portal || "",
       isLegacyVariant: variantMeta.isLegacyVariant,
       migrationRequired: variantMeta.migrationRequired,
-      scheduledChange: variantMeta.migrationRequired ? null : attributes?.status === "active" ? null : undefined,
+      scheduledChange: mergedScheduledChange,
       lastEvent: eventName,
       updatedAt: new Date()
     };
-
-    if (!subscriptionSet.scheduledChange) {
-      delete subscriptionSet.scheduledChange;
-    }
 
     if (!organizationSlug) {
       delete subscriptionSet.organizationSlug;
@@ -148,6 +172,7 @@ export async function POST(request) {
           planInterval,
           quantity,
           customerEmail: String(customerEmail || ""),
+          appUserEmail: String(appUserEmail || ""),
           customerId,
           organizationSlug: String(organizationSlug || ""),
           subtotal: attributes?.subtotal || null,

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { AlertBanner } from "@/components/alert-banner";
 
 export function PricingSection({ pricing, isAuthenticated }) {
   const [quantity, setQuantity] = useState(5);
@@ -81,11 +82,7 @@ export function PricingSection({ pricing, isAuthenticated }) {
           </div>
         </div>
 
-        {checkoutError ? (
-          <div className="alert alert-error mt-6 text-sm">
-            <span>{checkoutError}</span>
-          </div>
-        ) : null}
+        {checkoutError ? <AlertBanner tone="error" className="mt-6">{checkoutError}</AlertBanner> : null}
 
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
           {plans.map((plan) => {

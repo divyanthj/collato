@@ -3,12 +3,14 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 
 export function AccessGateway({
   displayName,
   suggestedOrganizationName,
   hasOwnedOrganization,
+  accessibleOrganizations = [],
   pendingOrganizationInvites,
   pendingWorkspaceInvites,
   requiresCheckout = false,
@@ -42,6 +44,10 @@ export function AccessGateway({
         }
 
         setSuccessMessage(`You now have access to ${result.name}.`);
+        if (result?.slug) {
+          router.push(`/dashboard?org=${encodeURIComponent(result.slug)}&orgCreated=1`);
+          return;
+        }
         router.refresh();
       } catch (gatewayError) {
         setError(gatewayError instanceof Error ? gatewayError.message : "Could not create organization");
@@ -126,6 +132,18 @@ export function AccessGateway({
 
       <div className="mt-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr] xl:items-start">
         <div>
+          {accessibleOrganizations.length > 0 ? (
+            <div className="mb-4 rounded-[1.5rem] border border-success/30 bg-success/10 p-4">
+              <div className="text-sm font-semibold text-success">You still have access to invited organizations</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {accessibleOrganizations.map((organization) => (
+                  <a key={organization.slug} href={`/dashboard?org=${encodeURIComponent(organization.slug)}`} className="btn btn-sm btn-outline">
+                    {organization.name}
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div id="access-gateway-billing" className="rounded-[2rem] border border-primary/15 bg-base-100 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -252,8 +270,8 @@ export function AccessGateway({
         </div>
       </div>
 
-      {successMessage ? <div className="alert alert-success mt-6 text-sm"><span>{successMessage}</span></div> : null}
-      {error ? <div className="alert alert-error mt-4 text-sm"><span>{error}</span></div> : null}
+      {successMessage ? <AlertBanner tone="success" className="mt-6">{successMessage}</AlertBanner> : null}
+      {error ? <AlertBanner tone="error" className="mt-4">{error}</AlertBanner> : null}
     </div>
   );
 }

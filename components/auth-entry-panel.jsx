@@ -1,5 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
+import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 export function AuthEntryPanel({ mode = "hero" }) {
     const [email, setEmail] = useState("");
@@ -56,13 +57,9 @@ export function AuthEntryPanel({ mode = "hero" }) {
         </button>
       </div>
 
-      {statusMessage ? (<div className="alert alert-success text-sm">
-          <span>{statusMessage}</span>
-        </div>) : null}
+      {statusMessage ? <AlertBanner tone="success" className="mt-1">{statusMessage}</AlertBanner> : null}
 
-      {error ? (<div className="alert alert-error text-sm">
-          <span>{error}</span>
-        </div>) : null}
+      {error ? <AlertBanner tone="error" className="mt-1">{error}</AlertBanner> : null}
     </div>);
 }
 

@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 
 export function WorkspaceDangerZone({ workspace, canDeleteWorkspace }) {
@@ -68,9 +69,7 @@ export function WorkspaceDangerZone({ workspace, canDeleteWorkspace }) {
         </p>
       </div>
 
-      {error ? (<div className="alert alert-error mt-4 text-sm">
-          <span>{error}</span>
-        </div>) : null}
+      {error ? <AlertBanner tone="error" className="mt-4">{error}</AlertBanner> : null}
 
       <dialog ref={dialogRef} className="modal">
         <div className="modal-box max-w-xl rounded-[2rem]">
@@ -82,9 +81,7 @@ export function WorkspaceDangerZone({ workspace, canDeleteWorkspace }) {
             The workspace record, uploaded knowledge, saved updates, tracked tasks, and retrieval index for this workspace will all be removed.
           </p>
 
-          {error ? (<div className="alert alert-error mt-4 text-sm">
-              <span>{error}</span>
-            </div>) : null}
+          {error ? <AlertBanner tone="error" className="mt-4">{error}</AlertBanner> : null}
 
           <div className="modal-action">
             <button type="button" className="btn btn-ghost" onClick={closeDialog} disabled={isDeleting}>

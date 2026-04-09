@@ -38,7 +38,7 @@ export const POST = auth(async (request) => {
                 content: [
                     {
                         type: "input_text",
-                        text: "You are a workspace knowledge-base assistant. Answer using the retrieved workspace excerpts first, then use the task context only if it helps. Do not invent facts. If the retrieved context is insufficient, say what is missing clearly."
+                        text: "You are a workspace knowledge-base assistant. Answer using the retrieved workspace excerpts first, then use the task context only if it helps. Do not invent facts. Some workspace items may be marked private from AI and intentionally excluded from context. If the retrieved context is insufficient, say what is missing clearly."
                     }
                 ]
             },

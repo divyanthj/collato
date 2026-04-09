@@ -1,16 +1,53 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { auth, signIn, signOut } from "@/auth";
 import logo from "@/app/logo.png";
 import appConfig from "@/config/app";
 import { AccessGateway } from "@/components/access-gateway";
 import { AuthEntryPanel } from "@/components/auth-entry-panel";
+import { CreateOrganizationButton } from "@/components/create-organization-button";
 import { InviteInbox } from "@/components/invite-inbox";
+import { OrganizationSwitcher } from "@/components/organization-switcher";
 import { OrganizationMemberManager } from "@/components/organization-member-manager";
-import { getWorkspaceDashboardData } from "@/lib/data";
-export default async function WorkspacePage() {
+import { AlertBanner } from "@/components/alert-banner";
+import { assertUserCanCreateOrganization } from "@/lib/billing";
+import { createOrganization, getWorkspaceDashboardData } from "@/lib/data";
+
+function readSearchParam(value) {
+    if (Array.isArray(value)) {
+        return String(value[0] ?? "");
+    }
+    return typeof value === "string" ? value : "";
+}
+
+export default async function WorkspacePage({ searchParams }) {
     const session = await auth();
-    const { organization, workspaces, permissions, accessGate, pendingWorkspaceInvites } = await getWorkspaceDashboardData(session?.user?.email, session?.user?.name);
+    const postCheckoutCreateOrg = readSearchParam(searchParams?.postCheckoutCreateOrg) === "1";
+    const postCheckoutOrgName = readSearchParam(searchParams?.postCheckoutOrgName);
+    let postCheckoutError = "";
+    if (session?.user?.email && postCheckoutCreateOrg) {
+        try {
+            await assertUserCanCreateOrganization(session.user.email);
+            const organization = await createOrganization({
+                name: postCheckoutOrgName || `${session.user.name?.trim() || "My"} Organization`,
+                ownerName: session.user.name ?? "Organization owner",
+                ownerEmail: session.user.email
+            });
+            redirect(`/dashboard?org=${encodeURIComponent(organization.slug)}&orgCreated=1`);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : "";
+            if (message === "You already own an organization") {
+                redirect("/dashboard");
+            }
+            postCheckoutError = message || "We could not finish organization creation after checkout. Please try again.";
+        }
+    }
+    const selectedOrganizationSlug = readSearchParam(searchParams?.org);
+    const orgCreated = readSearchParam(searchParams?.orgCreated) === "1";
+    const { organization, organizations, workspaces, permissions, accessGate, pendingWorkspaceInvites, fallbackFromGatedOrg } = await getWorkspaceDashboardData(session?.user?.email, session?.user?.name, selectedOrganizationSlug);
+    const organizationQuery = organization?.slug ? `?org=${encodeURIComponent(organization.slug)}` : "";
     const stats = [
         { label: "Organization", value: organization?.name ?? "None yet", note: organization ? `${organization.members.length} members in the parent org` : "Sign in to create an organization" },
         { label: "Visible workspaces", value: String(workspaces.length), note: workspaces.length ? "Workspaces you can currently access" : "No workspaces yet" },
@@ -35,13 +72,14 @@ export default async function WorkspacePage() {
             note: workspaces.length ? "Shared next steps across workspaces" : "No tasks logged yet"
         }
     ];
-    if (session?.user?.email && accessGate && (accessGate.requiresCheckout || !organization)) {
+    if (session?.user?.email && accessGate && !organization) {
         return (<main className="min-h-screen px-4 py-6 lg:px-6">
       <section className="mx-auto max-w-7xl">
         <AccessGateway
           displayName={session.user.name ?? ""}
           suggestedOrganizationName={accessGate.suggestedOrganizationName}
           hasOwnedOrganization={accessGate.hasOwnedOrganization}
+          accessibleOrganizations={accessGate.accessibleOrganizations ?? []}
           pendingOrganizationInvites={accessGate.pendingOrganizationInvites}
           pendingWorkspaceInvites={accessGate.pendingWorkspaceInvites}
           requiresCheckout={Boolean(accessGate.requiresCheckout)}
@@ -82,7 +120,10 @@ export default async function WorkspacePage() {
               </div>) : (<div className="mt-3 space-y-3">
                 <form action={async () => {
                 "use server";
-                await signIn("google", { redirectTo: "/dashboard" });
+                await signIn("google", {
+                    redirectTo: "/dashboard",
+                    prompt: "select_account"
+                });
             }}>
                   <button className="btn btn-primary btn-sm w-full">Continue with Google</button>
                 </form>
@@ -113,15 +154,26 @@ export default async function WorkspacePage() {
                 </p>
               </div>
               <div className="flex shrink-0 flex-wrap gap-3 lg:justify-end">
-                {organization ? (<Link href="/dashboard/organization" className="btn btn-outline">
+                {organization ? (<Link href={`/dashboard/organization${organizationQuery}`} className="btn btn-outline">
                     Organization settings
                   </Link>) : null}
-                {permissions.canCreateWorkspaces ? (<Link href="/dashboard/new" className="btn btn-primary">
+                {permissions.canCreateWorkspaces ? (<Link href={`/dashboard/new${organizationQuery}`} className="btn btn-primary">
                     Create workspace
                   </Link>) : (<span className="btn btn-disabled">
                     Create workspace
                   </span>)}
+                {organization && accessGate && !accessGate.hasOwnedOrganization ? (<CreateOrganizationButton suggestedOrganizationName={accessGate.suggestedOrganizationName} returnTo={`/dashboard?org=${encodeURIComponent(organization.slug)}`} currentUserEmail={session.user.email ?? ""}/>) : null}
               </div>
+            </div>
+
+            {orgCreated ? <AlertBanner tone="success" className="mt-5">Your organization is ready. You are now viewing it as owner.</AlertBanner> : null}
+            {postCheckoutError ? <AlertBanner tone="error" className="mt-3">{postCheckoutError}</AlertBanner> : null}
+            {fallbackFromGatedOrg ? (<AlertBanner tone="success" className="mt-3">
+                {`"${fallbackFromGatedOrg.fromName}" currently requires subscription. Switched to "${fallbackFromGatedOrg.toName}".`}
+              </AlertBanner>) : null}
+
+            <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
+              <OrganizationSwitcher organizations={organizations} selectedOrganizationSlug={organization?.slug ?? ""}/>
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2 2xl:grid-cols-6">
@@ -149,7 +201,7 @@ export default async function WorkspacePage() {
               </div>
 
               <div className="mt-6 flex justify-end">
-                <Link href="/dashboard/organization" className="btn btn-outline btn-sm">
+                <Link href={`/dashboard/organization${organizationQuery}`} className="btn btn-outline btn-sm">
                   Open full organization settings
                 </Link>
               </div>
@@ -159,7 +211,7 @@ export default async function WorkspacePage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Workspaces</div>
-                <h2 className="mt-2 text-2xl font-semibold text-neutral">Current workspace layer</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-neutral">Your workspaces</h2>
               </div>
               <div className="badge badge-outline self-start sm:self-center">{workspaces.length} total</div>
             </div>

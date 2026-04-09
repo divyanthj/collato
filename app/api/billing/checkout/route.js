@@ -14,6 +14,10 @@ export async function POST(request) {
   const quantity = Number(body.quantity);
   const mode = typeof body.mode === "string" ? body.mode : "new_subscription";
   const organizationSlug = typeof body.organizationSlug === "string" ? body.organizationSlug.trim() : "";
+  const redirectTo = typeof body.redirectTo === "string" ? body.redirectTo.trim() : "";
+  const expectedUserEmail = typeof body.expectedUserEmail === "string" ? body.expectedUserEmail.trim().toLowerCase() : "";
+  const safeRedirectTo = redirectTo.startsWith("/") ? redirectTo : "";
+  const sessionEmail = session.user.email.toLowerCase();
 
   if (!["month", "year"].includes(interval)) {
     return NextResponse.json({ error: "Invalid billing interval" }, { status: 400 });
@@ -27,12 +31,26 @@ export async function POST(request) {
     return NextResponse.json({ error: "Invalid checkout mode" }, { status: 400 });
   }
 
+  if (expectedUserEmail && expectedUserEmail !== sessionEmail) {
+    return NextResponse.json(
+      {
+        error: "Checkout session email mismatch. Please sign out and sign in with the intended account.",
+        expectedUserEmail,
+        sessionUserEmail: sessionEmail
+      },
+      { status: 409 }
+    );
+  }
+
   const organization = organizationSlug
     ? await resolveOrganizationForUser(session.user.email, organizationSlug)
     : null;
 
   if (organizationSlug && !organization) {
     return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+  }
+  if (organization && organization.ownerEmail !== session.user.email.toLowerCase()) {
+    return NextResponse.json({ error: "Only the organization owner can manage billing" }, { status: 403 });
   }
 
   if (!organization && mode !== "new_subscription") {
@@ -51,13 +69,14 @@ export async function POST(request) {
 
   try {
     const url = await createLemonCheckoutUrl({
-      userEmail: session.user.email,
+      userEmail: sessionEmail,
       interval,
       quantity,
       organizationSlug: organization?.slug ?? "",
-      mode
+      mode,
+      redirectUrl: safeRedirectTo ? `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}${safeRedirectTo}` : ""
     });
-    return NextResponse.json({ url }, { status: 200 });
+    return NextResponse.json({ url, sessionUserEmail: sessionEmail }, { status: 200 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not create checkout";
     return NextResponse.json({ error: message }, { status: 400 });

@@ -12,7 +12,7 @@ export default async function WorkspaceKnowledgePage({ params }) {
     if (!data) {
         notFound();
     }
-    const { workspace, files, updates, tasks, knowledgeSummary } = data;
+    const { workspace, files, updates, tasks, knowledgeSummary, permissions } = data;
     const workspaceSummary = {
         ...workspace,
         fileCount: files.length,
@@ -36,7 +36,13 @@ export default async function WorkspaceKnowledgePage({ params }) {
         </div>
 
         <div className="mt-6">
-          <KnowledgeBaseManager workspaces={[workspaceSummary]} initialFiles={files} knowledgeSummary={knowledgeSummary} isAuthenticated={Boolean(session.user.email)}/>
+          <KnowledgeBaseManager
+            workspaces={[workspaceSummary]}
+            initialFiles={files}
+            knowledgeSummary={knowledgeSummary}
+            isAuthenticated={Boolean(session.user.email)}
+            canManageAiPrivacy={permissions.organizationRole === "owner"}
+          />
         </div>
       </section>
     </main>);

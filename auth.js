@@ -31,12 +31,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         })
     ],
     callbacks: {
-        async jwt({ token, user, trigger, session }) {
+        async jwt({ token, user, account, profile, trigger, session }) {
             if (user) {
                 token.sub = user.id ?? token.sub;
-                token.email = user.email ?? token.email;
-                token.name = user.name ?? token.name;
-                token.picture = user.image ?? token.picture;
+                token.email =
+                    user.email ??
+                    (typeof profile?.email === "string" ? profile.email : null) ??
+                    token.email;
+                token.name =
+                    user.name ??
+                    (typeof profile?.name === "string" ? profile.name : null) ??
+                    token.name;
+                token.picture =
+                    user.image ??
+                    (typeof profile?.picture === "string" ? profile.picture : null) ??
+                    token.picture;
+            }
+
+            if (account?.provider === "google" && typeof profile?.email === "string") {
+                token.email = profile.email ?? token.email;
+                token.name = typeof profile?.name === "string" ? profile.name : token.name;
+                token.picture = typeof profile?.picture === "string" ? profile.picture : token.picture;
             }
 
             if (trigger === "update" && session?.user) {
@@ -47,8 +62,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             return token;
         },
-        async signIn({ user }) {
-            return Boolean(user.email);
+        async signIn({ user, account, profile }) {
+            const email = typeof user?.email === "string" && user.email
+                ? user.email
+                : typeof profile?.email === "string" && profile.email
+                    ? profile.email
+                    : null;
+
+            if (!email) {
+                console.error("[auth] Denying sign-in because no email was provided", {
+                    provider: account?.provider ?? "unknown"
+                });
+                return false;
+            }
+
+            if (account?.provider === "google" && profile?.email_verified === false) {
+                console.error("[auth] Denying Google sign-in because email is not verified", {
+                    email
+                });
+                return false;
+            }
+
+            return true;
         },
         async session({ session, token }) {
             if (session.user) {

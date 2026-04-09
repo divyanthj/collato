@@ -1,8 +1,17 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
-export function CreateWorkspaceForm({ isAuthenticated, canCreateWorkspaces, ownerName, ownerEmail, organizationName, organizationRole }) {
+export function CreateWorkspaceForm({
+    isAuthenticated,
+    canCreateWorkspaces,
+    ownerName,
+    ownerEmail,
+    organizationName,
+    organizationSlug,
+    organizationRole
+}) {
     const router = useRouter();
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -22,6 +31,7 @@ export function CreateWorkspaceForm({ isAuthenticated, canCreateWorkspaces, owne
                     body: JSON.stringify({
                         name,
                         description,
+                        organizationSlug,
                         memberEmails: memberEmails
                             .split(/[\n,]/)
                             .map((value) => value.trim())
@@ -113,12 +123,15 @@ export function CreateWorkspaceForm({ isAuthenticated, canCreateWorkspaces, owne
         </label>
       </div>
 
-      {error ? (<div className="alert alert-error mt-4 text-sm">
-          <span>{error}</span>
-        </div>) : null}
+      {error ? <AlertBanner tone="error" className="mt-4">{error}</AlertBanner> : null}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button type="button" className="btn btn-primary" onClick={handleCreate} disabled={!isAuthenticated || !canCreateWorkspaces || isSaving || !name.trim() || !description.trim()}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleCreate}
+          disabled={!isAuthenticated || !canCreateWorkspaces || isSaving || !organizationSlug || !name.trim() || !description.trim()}
+        >
           {isSaving ? "Creating..." : "Create workspace"}
         </button>
         <p className="text-sm leading-7 text-base-content/60">{canCreateWorkspaces ? "Each workspace sits under the organization, with its own members, knowledge base, updates, and tasks." : "Your current access does not include workspace creation."}</p>

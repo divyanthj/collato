@@ -12,7 +12,7 @@ export default async function WorkspaceUpdatesPage({ params }) {
     if (!data) {
         notFound();
     }
-    const { workspace, files, updates, tasks, activityEvents } = data;
+    const { workspace, files, updates, tasks, activityEvents, permissions } = data;
     const workspaceSummary = {
         ...workspace,
         fileCount: files.length,
@@ -36,7 +36,15 @@ export default async function WorkspaceUpdatesPage({ params }) {
         </div>
 
         <div className="mt-6">
-          <WorkspaceUpdateIntake workspaces={[workspaceSummary]} initialUpdates={updates} initialActivityEvents={activityEvents} isAuthenticated={Boolean(session.user.email)} currentUserName={session.user.name ?? "Signed in user"} currentUserEmail={session.user.email}/>
+          <WorkspaceUpdateIntake
+            workspaces={[workspaceSummary]}
+            initialUpdates={updates}
+            initialActivityEvents={activityEvents}
+            isAuthenticated={Boolean(session.user.email)}
+            currentUserName={session.user.name ?? "Signed in user"}
+            currentUserEmail={session.user.email}
+            canManageAiPrivacy={permissions.organizationRole === "owner"}
+          />
         </div>
       </section>
     </main>);

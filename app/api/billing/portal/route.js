@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { createPortalUrlFromSubscription, getSubscriptionForOrganization, resolveOrganizationForUser } from "@/lib/billing";
+import { createPortalUrlFromSubscription, getOrganizationSubscriptionSummary, resolveOrganizationForUser } from "@/lib/billing";
 
 export async function POST(request) {
   const session = await auth();
@@ -15,8 +15,12 @@ export async function POST(request) {
   if (!organization) {
     return NextResponse.json({ error: "Organization not found" }, { status: 404 });
   }
+  if (organization.ownerEmail !== session.user.email.toLowerCase()) {
+    return NextResponse.json({ error: "Only the organization owner can manage billing" }, { status: 403 });
+  }
 
-  const subscription = await getSubscriptionForOrganization(organization.slug);
+  const summary = await getOrganizationSubscriptionSummary(organization);
+  const subscription = summary.canonical;
   if (!subscription) {
     return NextResponse.json({ error: "No subscription found for this organization" }, { status: 404 });
   }

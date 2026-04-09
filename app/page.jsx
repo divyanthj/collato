@@ -57,7 +57,10 @@ export default async function LandingPage() {
                   <form
                     action={async () => {
                       "use server";
-                      await signIn("google", { redirectTo: "/dashboard" });
+                      await signIn("google", {
+                        redirectTo: "/dashboard",
+                        prompt: "select_account"
+                      });
                     }}
                   >
                     <button className="btn btn-primary">Continue with Google</button>

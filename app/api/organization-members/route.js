@@ -7,12 +7,14 @@ export const POST = auth(async (request) => {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const body = await request.json();
+    const organizationSlug = String(body.organizationSlug ?? "").trim();
     const memberEmail = String(body.memberEmail ?? "").trim();
-    if (!memberEmail) {
+    if (!organizationSlug || !memberEmail) {
         return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     try {
         const organization = await addOrganizationMember({
+            organizationSlug,
             requesterEmail: request.auth.user.email,
             memberEmail,
             role: String(body.role ?? "member")
@@ -37,7 +39,7 @@ export const POST = auth(async (request) => {
     catch (error) {
         const message = error instanceof Error ? error.message : "Could not add organization member";
         const code = error && typeof error === "object" && "code" in error ? String(error.code) : undefined;
-        const status = message === "Only organization owners or admins can add members"
+        const status = message === "Only organization owners can add members"
             ? 403
             : message === "Organization not found"
                 ? 404

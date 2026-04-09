@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 export function OrganizationMemberManager({ organization, canManageMembers, organizationRole }) {
     const router = useRouter();
@@ -19,7 +20,11 @@ export function OrganizationMemberManager({ organization, canManageMembers, orga
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({ memberEmail, role: memberRole })
+                    body: JSON.stringify({
+                        organizationSlug: organization.slug,
+                        memberEmail,
+                        role: memberRole
+                    })
                 });
                 const result = await readResponsePayload(response);
                 if (!response.ok) {
@@ -69,13 +74,13 @@ export function OrganizationMemberManager({ organization, canManageMembers, orga
         </button>
       </div>
 
-      {error ? (<div className="alert alert-error mt-4 text-sm">
+      {error ? (<AlertBanner tone="error" className="mt-4">
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
             <span>{error}</span>
             {upgradePath ? (<a href={upgradePath} className="btn btn-sm btn-outline">
                 Upgrade plan
               </a>) : null}
           </div>
-        </div>) : null}
+        </AlertBanner>) : null}
     </div>);
 }

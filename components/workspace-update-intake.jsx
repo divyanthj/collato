@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useRef, useState, useTransition } from "react";
+import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 import { VoiceInputButton } from "@/components/voice-input-button";
 import { WaveformCanvas } from "@/components/waveform-canvas";
@@ -12,7 +13,15 @@ const ACTION_TRACKER_STATE_LABELS = {
     archived: "Done"
 };
 
-export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActivityEvents = [], isAuthenticated, currentUserName, currentUserEmail }) {
+export function WorkspaceUpdateIntake({
+    workspaces,
+    initialUpdates,
+    initialActivityEvents = [],
+    isAuthenticated,
+    currentUserName,
+    currentUserEmail,
+    canManageAiPrivacy = false
+}) {
     const voiceButtonRef = useRef(null);
     const [selectedWorkspaceSlug, setSelectedWorkspaceSlug] = useState(workspaces[0]?.slug ?? "");
     const [body, setBody] = useState("");
@@ -30,6 +39,7 @@ export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActiv
     const [memberFilter, setMemberFilter] = useState("all");
     const [actionStateFilter, setActionStateFilter] = useState("active");
     const [actionStatusSavingKey, setActionStatusSavingKey] = useState(null);
+    const [privacySavingUpdateId, setPrivacySavingUpdateId] = useState(null);
     const [isSubmitting, startSubmitting] = useTransition();
     const selectedWorkspace = useMemo(() => workspaces.find((workspace) => workspace.slug === selectedWorkspaceSlug) ?? workspaces[0], [selectedWorkspaceSlug, workspaces]);
     const filteredUpdates = useMemo(() => {
@@ -294,6 +304,62 @@ export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActiv
             setActionStatusSavingKey(null);
         }
     };
+    const handleUpdateAiPrivacyToggle = async (update, nextValue) => {
+        if (!canManageAiPrivacy) {
+            return;
+        }
+        setError(null);
+        setPrivacySavingUpdateId(update.id);
+        const previousUpdates = savedUpdates;
+        const previousActivityEvents = savedActivityEvents;
+        setSavedUpdates((current) => current.map((item) => item.id === update.id ? {
+            ...item,
+            aiPrivate: nextValue
+        } : item));
+        setSavedActivityEvents((current) => current.map((event) => event.update?.id === update.id
+            ? {
+                ...event,
+                update: {
+                    ...event.update,
+                    aiPrivate: nextValue
+                }
+            }
+            : event));
+        try {
+            const response = await fetch(`/api/workspace-updates/${update.id}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    workspaceSlug: update.workspaceSlug,
+                    aiPrivate: nextValue
+                })
+            });
+            const result = await readResponsePayload(response);
+            if (!response.ok) {
+                throw new Error(result.error ?? "Could not update AI privacy");
+            }
+            setSavedUpdates((current) => current.map((item) => item.id === result.id ? result : item));
+            setSavedActivityEvents((current) => current.map((event) => event.update?.id === result.id
+                ? {
+                    ...event,
+                    update: result
+                }
+                : event));
+            setStatusMessage(nextValue
+                ? "This update is now excluded from AI context."
+                : "This update is now available to AI again.");
+        }
+        catch (privacyError) {
+            setSavedUpdates(previousUpdates);
+            setSavedActivityEvents(previousActivityEvents);
+            setError(privacyError instanceof Error ? privacyError.message : "Could not update AI privacy");
+        }
+        finally {
+            setPrivacySavingUpdateId(null);
+        }
+    };
     return (<div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="glass-panel rounded-[2rem] p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -358,9 +424,7 @@ export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActiv
             </div>) : null}
         </div>
 
-        {error ? (<div className="alert alert-error mt-4 text-sm">
-            <span>{error}</span>
-          </div>) : null}
+        {error ? <AlertBanner tone="error" className="mt-4">{error}</AlertBanner> : null}
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <button type="button" className="btn btn-primary" onClick={handleSubmit} disabled={!isAuthenticated || isSubmitting || !selectedWorkspace || (!body.trim() && supportFiles.length === 0)}>
@@ -378,9 +442,7 @@ export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActiv
           </div>
         </div>
 
-        {statusMessage ? (<div className="alert alert-success mt-6 text-sm">
-            <span>{statusMessage}</span>
-          </div>) : null}
+        {statusMessage ? <AlertBanner tone="success" className="mt-6">{statusMessage}</AlertBanner> : null}
 
         {analysis ? (<div className="mt-6 space-y-4">
             <div className="rounded-[1.5rem] bg-secondary/35 p-4 text-sm leading-7 text-secondary-content">
@@ -568,7 +630,21 @@ export function WorkspaceUpdateIntake({ workspaces, initialUpdates, initialActiv
                           {event.update.createdByName} via {event.update.channel} | {new Date(event.timestamp).toLocaleString()}
                         </div>
                       </div>
-                      <div className="badge badge-outline">{event.update.inputMethod}</div>
+                      <div className="flex items-center gap-2">
+                        {canManageAiPrivacy ? (<label className="label cursor-pointer gap-2 py-0">
+                            <span className="label-text text-xs">Private from AI</span>
+                            <input
+                              type="checkbox"
+                              className="toggle toggle-sm"
+                              checked={Boolean(event.update.aiPrivate)}
+                              onChange={(targetEvent) => {
+                    void handleUpdateAiPrivacyToggle(event.update, targetEvent.target.checked);
+                }}
+                              disabled={privacySavingUpdateId === event.update.id}
+                            />
+                          </label>) : null}
+                        <div className="badge badge-outline">{event.update.inputMethod}</div>
+                      </div>
                     </div>
                     <div className="mt-3 rounded-xl bg-secondary/35 p-3">
                       <div className="text-xs uppercase tracking-[0.18em] text-secondary-content/70">Summary</div>

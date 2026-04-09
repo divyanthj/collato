@@ -1,5 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
+import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 import { VoiceInputButton } from "@/components/voice-input-button";
 function ReportSection({ title, items, emptyLabel }) {
@@ -249,13 +250,9 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
           <div className="text-sm text-base-content/60">{selectedTemplate?.name ?? "Template"} selected.</div>
         </div>
 
-        {error ? (<div className="alert alert-error mt-4 text-sm">
-            <span>{error}</span>
-          </div>) : null}
+        {error ? <AlertBanner tone="error" className="mt-4">{error}</AlertBanner> : null}
 
-        {statusMessage ? (<div className="alert alert-success mt-4 text-sm">
-            <span>{statusMessage}</span>
-          </div>) : null}
+        {statusMessage ? <AlertBanner tone="success" className="mt-4">{statusMessage}</AlertBanner> : null}
 
         {missingQuestions.length > 0 ? (<div className="mt-6 rounded-[1.5rem] border border-base-300 bg-base-100 p-5">
             <div className="text-sm font-semibold text-neutral">Add the missing details before you continue</div>

@@ -8,13 +8,15 @@ export const POST = auth(async (request) => {
     const body = await request.json();
     const name = String(body.name ?? "").trim();
     const description = String(body.description ?? "").trim();
-    if (!name || !description) {
+    const organizationSlug = String(body.organizationSlug ?? "").trim();
+    if (!name || !description || !organizationSlug) {
         return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     try {
         const workspace = await createWorkspace({
             name,
             description,
+            organizationSlug,
             ownerName: request.auth.user.name ?? "Workspace owner",
             ownerEmail: request.auth.user.email,
             memberEmails: Array.isArray(body.memberEmails) ? body.memberEmails.map((item) => String(item)) : []
@@ -23,7 +25,11 @@ export const POST = auth(async (request) => {
     }
     catch (error) {
         const message = error instanceof Error ? error.message : "Could not create workspace";
-        const status = message === "You do not have permission to create workspaces" ? 403 : 400;
+        const status = message === "You do not have permission to create workspaces" || message === "You do not have access to this organization"
+            ? 403
+            : message === "Organization not found"
+                ? 404
+                : 400;
         return NextResponse.json({ error: message }, { status });
     }
 });
