@@ -182,9 +182,11 @@ export default async function OrganizationSettingsPage({ searchParams }) {
                 {workspaces.length > 0 ? (workspaces.map((workspace) => (<div key={workspace.slug} className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <Link href={`/dashboard/${workspace.slug}`} className="text-lg font-semibold text-neutral transition hover:text-primary">
-                            {workspace.name}
-                          </Link>
+                          {accessGate?.requiresCheckout ? (<span className="text-lg font-semibold text-neutral/70">
+                              {workspace.name}
+                            </span>) : (<Link href={`/dashboard/${workspace.slug}`} className="text-lg font-semibold text-neutral transition hover:text-primary">
+                              {workspace.name}
+                            </Link>)}
                           <p className="mt-2 text-sm leading-6 text-base-content/70">{workspace.description}</p>
                         </div>
                         <div className="badge badge-outline">{workspace.members.length} members</div>

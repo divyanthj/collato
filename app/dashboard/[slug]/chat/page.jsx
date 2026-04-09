@@ -1,18 +1,32 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { WorkspaceChat } from "@/components/workspace-chat";
 import { WorkspaceSubnav } from "@/components/workspace-subnav";
-import { getWorkspaceChatHistory, getWorkspaceDetailData } from "@/lib/data";
+import { getWorkspaceChatHistory, resolveWorkspaceRouteForUser } from "@/lib/data";
 export default async function WorkspaceChatPage({ params }) {
     const session = await auth();
     if (!session?.user?.email) {
         notFound();
     }
-    const data = await getWorkspaceDetailData(params.slug, session.user.email);
-    if (!data) {
+    const resolution = await resolveWorkspaceRouteForUser(
+        params.slug,
+        session.user.email,
+        session.user.name ?? "Signed in user"
+    );
+    if (resolution.type === "organization") {
+        const workspaceQuery = resolution.workspaceSlug ? `&workspace=${encodeURIComponent(resolution.workspaceSlug)}` : "";
+        const workspaceNameQuery = resolution.workspaceName ? `&workspaceName=${encodeURIComponent(resolution.workspaceName)}` : "";
+        const reasonQuery = resolution.reason ? `&workspaceReason=${encodeURIComponent(resolution.reason)}` : "";
+        redirect(`/dashboard?org=${encodeURIComponent(resolution.organizationSlug)}${workspaceQuery}${workspaceNameQuery}${reasonQuery}`);
+    }
+    if (resolution.type !== "workspace") {
         notFound();
     }
-    const initialMessages = await getWorkspaceChatHistory(params.slug, session.user.email);
+    if (resolution.canonicalSlug !== params.slug) {
+        redirect(`/dashboard/${encodeURIComponent(resolution.canonicalSlug)}/chat`);
+    }
+    const data = resolution.data;
+    const initialMessages = await getWorkspaceChatHistory(data.workspace.slug, session.user.email);
     const { workspace, files, updates, tasks } = data;
     const workspaceSummary = {
         ...workspace,

@@ -1,18 +1,32 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { WorkspaceDangerZone } from "@/components/workspace-danger-zone";
 import { WorkspaceMemberManager } from "@/components/workspace-member-manager";
-import { getWorkspaceDetailData } from "@/lib/data";
+import { resolveWorkspaceRouteForUser } from "@/lib/data";
 export default async function WorkspaceDetailPage({ params }) {
     const session = await auth();
     if (!session?.user?.email) {
         notFound();
     }
-    const data = await getWorkspaceDetailData(params.slug, session.user.email);
-    if (!data) {
+    const resolution = await resolveWorkspaceRouteForUser(
+        params.slug,
+        session.user.email,
+        session.user.name ?? "Signed in user"
+    );
+    if (resolution.type === "organization") {
+        const workspaceQuery = resolution.workspaceSlug ? `&workspace=${encodeURIComponent(resolution.workspaceSlug)}` : "";
+        const workspaceNameQuery = resolution.workspaceName ? `&workspaceName=${encodeURIComponent(resolution.workspaceName)}` : "";
+        const reasonQuery = resolution.reason ? `&workspaceReason=${encodeURIComponent(resolution.reason)}` : "";
+        redirect(`/dashboard?org=${encodeURIComponent(resolution.organizationSlug)}${workspaceQuery}${workspaceNameQuery}${reasonQuery}`);
+    }
+    if (resolution.type !== "workspace") {
         notFound();
     }
+    if (resolution.canonicalSlug !== params.slug) {
+        redirect(`/dashboard/${encodeURIComponent(resolution.canonicalSlug)}`);
+    }
+    const data = resolution.data;
     const { organization, workspace, files, updates, tasks, overview, permissions } = data;
     return (<main className="min-h-screen">
       <section className="mx-auto max-w-7xl px-6 pb-8 pt-8 lg:px-10">

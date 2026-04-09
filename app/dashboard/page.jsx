@@ -46,8 +46,18 @@ export default async function WorkspacePage({ searchParams }) {
     }
     const selectedOrganizationSlug = readSearchParam(searchParams?.org);
     const orgCreated = readSearchParam(searchParams?.orgCreated) === "1";
+    const blockedWorkspaceSlug = readSearchParam(searchParams?.workspace);
+    const blockedWorkspaceName = readSearchParam(searchParams?.workspaceName);
+    const blockedWorkspaceReason = readSearchParam(searchParams?.workspaceReason);
     const { organization, organizations, workspaces, permissions, accessGate, pendingWorkspaceInvites, fallbackFromGatedOrg } = await getWorkspaceDashboardData(session?.user?.email, session?.user?.name, selectedOrganizationSlug);
     const organizationQuery = organization?.slug ? `?org=${encodeURIComponent(organization.slug)}` : "";
+    const workspaceBlockedMessage = blockedWorkspaceSlug
+        ? blockedWorkspaceReason === "subscription_required"
+            ? `${blockedWorkspaceName || blockedWorkspaceSlug} cannot be opened yet because this organization needs an active subscription.`
+            : blockedWorkspaceReason === "workspace_access_denied"
+                ? `${blockedWorkspaceName || blockedWorkspaceSlug} cannot be opened from this account.`
+                : `${blockedWorkspaceName || blockedWorkspaceSlug} is not available right now.`
+        : "";
     const stats = [
         { label: "Organization", value: organization?.name ?? "None yet", note: organization ? `${organization.members.length} members in the parent org` : "Sign in to create an organization" },
         { label: "Visible workspaces", value: String(workspaces.length), note: workspaces.length ? "Workspaces you can currently access" : "No workspaces yet" },
@@ -171,6 +181,7 @@ export default async function WorkspacePage({ searchParams }) {
             {fallbackFromGatedOrg ? (<AlertBanner tone="success" className="mt-3">
                 {`"${fallbackFromGatedOrg.fromName}" currently requires subscription. Switched to "${fallbackFromGatedOrg.toName}".`}
               </AlertBanner>) : null}
+            {workspaceBlockedMessage ? <AlertBanner tone="error" className="mt-3">{workspaceBlockedMessage}</AlertBanner> : null}
 
             <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
               <OrganizationSwitcher organizations={organizations} selectedOrganizationSlug={organization?.slug ?? ""}/>
@@ -222,9 +233,11 @@ export default async function WorkspacePage({ searchParams }) {
               {workspaces.length > 0 ? (workspaces.map((workspace) => (<div key={workspace.slug} className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <Link href={`/dashboard/${workspace.slug}`} className="text-lg font-semibold text-neutral transition hover:text-primary">
+                      {accessGate?.requiresCheckout ? (<span className="text-lg font-semibold text-neutral/70">
                           {workspace.name}
-                        </Link>
+                        </span>) : (<Link href={`/dashboard/${workspace.slug}`} className="text-lg font-semibold text-neutral transition hover:text-primary">
+                          {workspace.name}
+                        </Link>)}
                         <p className="mt-2 text-sm leading-6 text-base-content/70">{workspace.description}</p>
                       </div>
                       <div className="badge badge-outline">{workspace.members.length} members</div>
@@ -240,21 +253,29 @@ export default async function WorkspacePage({ searchParams }) {
                       {workspace.latestActivity ?? "No activity yet. Open the workspace to start adding knowledge or updates."}
                     </p>
                     <div className="mt-5 flex flex-wrap gap-3">
-                      <Link href={`/dashboard/${workspace.slug}`} className="btn btn-primary btn-sm">
-                        Open hub
-                      </Link>
-                      <Link href={`/dashboard/${workspace.slug}/knowledge`} className="btn btn-outline btn-sm">
-                        Knowledge
-                      </Link>
-                      <Link href={`/dashboard/${workspace.slug}/updates`} className="btn btn-outline btn-sm">
-                        Updates
-                      </Link>
-                      <Link href={`/dashboard/${workspace.slug}/chat`} className="btn btn-outline btn-sm">
-                        Ask workspace
-                      </Link>
-                      <Link href={`/dashboard/${workspace.slug}/tasks`} className="btn btn-outline btn-sm">
-                        Tasks
-                      </Link>
+                      {accessGate?.requiresCheckout ? (<>
+                          <span className="btn btn-disabled btn-sm">Open hub</span>
+                          <span className="btn btn-disabled btn-sm">Knowledge</span>
+                          <span className="btn btn-disabled btn-sm">Updates</span>
+                          <span className="btn btn-disabled btn-sm">Ask workspace</span>
+                          <span className="btn btn-disabled btn-sm">Tasks</span>
+                        </>) : (<>
+                          <Link href={`/dashboard/${workspace.slug}`} className="btn btn-primary btn-sm">
+                            Open hub
+                          </Link>
+                          <Link href={`/dashboard/${workspace.slug}/knowledge`} className="btn btn-outline btn-sm">
+                            Knowledge
+                          </Link>
+                          <Link href={`/dashboard/${workspace.slug}/updates`} className="btn btn-outline btn-sm">
+                            Updates
+                          </Link>
+                          <Link href={`/dashboard/${workspace.slug}/chat`} className="btn btn-outline btn-sm">
+                            Ask workspace
+                          </Link>
+                          <Link href={`/dashboard/${workspace.slug}/tasks`} className="btn btn-outline btn-sm">
+                            Tasks
+                          </Link>
+                        </>)}
                     </div>
                   </div>))) : (<div className="rounded-[1.5rem] border border-dashed border-base-300 bg-base-100 p-10 text-center text-sm leading-7 text-base-content/60">
                   No workspaces yet. Create the first workspace to begin collecting files and updates.

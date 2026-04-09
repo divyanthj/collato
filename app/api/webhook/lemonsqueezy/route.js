@@ -95,6 +95,10 @@ export async function POST(request) {
   const variantMeta = getVariantBillingMeta(variantId);
   const planInterval = variantMeta.planInterval;
 
+  if (!variantMeta.isManagedVariant) {
+    return NextResponse.json({ ok: true }, { status: 200 });
+  }
+
   if (data?.type === "subscriptions" && data?.id) {
     const existingSubscription = await subscriptionsCollection.findOne({ subscriptionId: String(data.id) });
     const renewalDate = attributes?.renews_at ? new Date(String(attributes.renews_at)) : null;

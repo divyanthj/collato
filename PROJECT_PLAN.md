@@ -247,6 +247,20 @@ This section tracks the latest thinking and implementation direction over time.
 - Decided that workspace membership should be a subset of organization membership, and that workspace members should be able to manage workspace membership.
 - Added a dedicated organization settings page so org-level membership and workspace oversight have a stable home in the product.
 
+### 2026-04-09
+
+- Tightened organization-level permissions so owner-only sections and mutations are hidden from non-owners in the UI and blocked server-side.
+- Added multi-organization context handling with an organization switcher, URL-driven org selection, and a path for invited users to create their own organization without losing invited-org access.
+- Added owner-only "Private from AI" controls for workspace files and updates, with filtering applied across workspace chat, knowledge-hub answers, report generation, and knowledge summary generation.
+- Reworked billing toward an in-app management model with canonical subscription selection, subscription history, seat/interval updates, cancel/resume actions, and a secondary portal fallback for payment-method and invoice edge cases.
+- Improved billing UX with explicit confirmation dialogs, clearer pricing/renewal copy, and visible monthly impact before plan changes are applied.
+- Changed seat increases to invoice immediately and changed seat decreases to schedule at next renewal so already-paid seats remain available through the current billing period.
+- Enforced the minimum one-seat rule in both UI and backend so seat reductions cannot take a plan below one total seat.
+- Hardened checkout/account linking by passing expected user identity into checkout creation and diagnosing prior account-mismatch behavior between Collato and Lemon Squeezy.
+- Refined org access gating so invited-org access can survive owned-org expiry, and added environment-based owner overrides for local/test access.
+- Diagnosed a workspace-opening failure as an org billing/access issue rather than a slug-generation issue, then updated routing and blocked-state messaging so failures are easier to understand and debug.
+- Corrected billing entitlement logic so unrelated Lemon Squeezy products under the same customer email no longer interfere with Collato access decisions or owner overrides.
+
 ## Current Next Steps
 
 1. Review and harden tenant isolation and authorization paths systematically.
