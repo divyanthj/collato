@@ -1,4 +1,5 @@
 import { Manrope, Space_Grotesk } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import appConfig from "@/config/app";
 
@@ -24,7 +25,23 @@ export default function RootLayout({ children }) {
       data-theme="collato"
       className={`${bodyFont.variable} ${displayFont.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        {children}
+        <Script id="datafast-queue" strategy="beforeInteractive">
+          {`
+            window.datafast = window.datafast || function() {
+              (window.datafast.q = window.datafast.q || []).push(arguments);
+            };
+          `}
+        </Script>
+        <Script
+          defer
+          data-website-id="dfid_9b8jAJNitm5Gbe7xMo4Uy"
+          data-domain="collato.io"
+          src="https://datafa.st/js/script.js"
+          strategy="afterInteractive"
+        />
+      </body>
     </html>
   );
 }

@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
+import { trackDatafastGoal } from "@/lib/client-analytics";
 function makeId() {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -29,6 +30,10 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
         if (!trimmedQuestion) {
             return;
         }
+        trackDatafastGoal("knowledge_base_question_asked", {
+            workspace_slug: selectedWorkspaceSlug,
+            question_length: trimmedQuestion.length
+        });
         setError(null);
         setQuestion("");
         setIsStreaming(true);

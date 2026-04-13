@@ -3,6 +3,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
+import { trackDatafastGoal } from "@/lib/client-analytics";
 import { VoiceInputButton } from "@/components/voice-input-button";
 import { WaveformCanvas } from "@/components/waveform-canvas";
 
@@ -154,6 +155,11 @@ export function KnowledgeBaseManager({
                     }
                     if (result.file) {
                         savedEntries.push(result.file);
+                        trackDatafastGoal("knowledge_file_added", {
+                            workspace_slug: selectedWorkspace.slug,
+                            file_type: result.file.fileType || selectedFile.type || "unknown",
+                            input_method: "file_upload"
+                        });
                     }
                     latestSummary = result.knowledgeSummary ?? latestSummary;
                 }

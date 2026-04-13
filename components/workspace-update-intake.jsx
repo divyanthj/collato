@@ -2,6 +2,7 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
+import { trackDatafastGoal } from "@/lib/client-analytics";
 import { VoiceInputButton } from "@/components/voice-input-button";
 import { WaveformCanvas } from "@/components/waveform-canvas";
 
@@ -274,6 +275,11 @@ export function WorkspaceUpdateIntake({
                     if (!response.ok) {
                         throw new Error(result.error ?? "Could not save update");
                     }
+                    trackDatafastGoal("workspace_update_added", {
+                        workspace_slug: selectedWorkspace.slug,
+                        input_method: isVoiceUsed ? "voice" : "typed",
+                        channel: DEFAULT_UPDATE_CHANNEL
+                    });
                     setSavedUpdates((current) => [result, ...current].slice(0, 8));
                     setSavedActivityEvents((current) => [{
                             id: `update-${result.id}`,
