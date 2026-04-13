@@ -70,11 +70,23 @@ export async function POST(request) {
       replyTo: email,
       subject: `New Collato contact form message from ${name}`,
       html: `
-        <h2>New contact form message</h2>
-        <p><strong>Name:</strong> ${safeName}</p>
-        <p><strong>Email:</strong> ${safeEmail}</p>
-        <p><strong>Message:</strong></p>
-        <p>${safeMessage}</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;background-color:#f4fbff;margin:0;padding:0;">
+          <tr>
+            <td align="center" style="padding:24px 12px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%;max-width:600px;border-collapse:separate;background-color:#ffffff;border:1px solid #d9e7f2;border-radius:16px;">
+                <tr>
+                  <td style="padding:24px;font-family:Arial,sans-serif;color:#18324a;">
+                    <h2 style="margin:0 0 16px;font-size:24px;line-height:1.2;color:#18324a;">New contact form message</h2>
+                    <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Name:</strong> ${safeName}</p>
+                    <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Email:</strong> ${safeEmail}</p>
+                    <p style="margin:0 0 8px;font-size:15px;line-height:1.6;"><strong>Message:</strong></p>
+                    <p style="margin:0;font-size:15px;line-height:1.7;color:#385065;white-space:normal;">${safeMessage}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       `,
       text: `New contact form message\n\nName: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
       tags: [
@@ -87,11 +99,23 @@ export async function POST(request) {
       to: email,
       subject: "We received your message",
       html: `
-        <h2>Thanks for contacting Collato.io</h2>
-        <p>Hi ${safeName},</p>
-        <p>We have received your message and will get back to you shortly.</p>
-        <p><strong>Your message:</strong></p>
-        <p>${safeMessage}</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;background-color:#f4fbff;margin:0;padding:0;">
+          <tr>
+            <td align="center" style="padding:24px 12px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%;max-width:600px;border-collapse:separate;background-color:#ffffff;border:1px solid #d9e7f2;border-radius:16px;">
+                <tr>
+                  <td style="padding:24px;font-family:Arial,sans-serif;color:#18324a;">
+                    <h2 style="margin:0 0 14px;font-size:24px;line-height:1.2;color:#18324a;">Thanks for contacting Collato.io</h2>
+                    <p style="margin:0 0 10px;font-size:15px;line-height:1.7;color:#385065;">Hi ${safeName},</p>
+                    <p style="margin:0 0 12px;font-size:15px;line-height:1.7;color:#385065;">We have received your message and will get back to you shortly.</p>
+                    <p style="margin:0 0 8px;font-size:15px;line-height:1.6;"><strong>Your message:</strong></p>
+                    <p style="margin:0;font-size:15px;line-height:1.7;color:#385065;white-space:normal;">${safeMessage}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       `,
       text: `Hi ${name},\n\nWe have received your message and will get back to you shortly.\n\nYour message:\n${message}`,
       tags: [
