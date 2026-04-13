@@ -42,6 +42,10 @@ To enable email sign-in and outbound email scaffolding:
 - `RESEND_REPLY_TO`
 - `AUTH_URL` or `NEXTAUTH_URL`
 
+Optional for contact form notifications:
+
+- `CONTACT_NOTIFICATION_EMAIL` (defaults to `divyanthj@gmail.com`)
+
 ## Wired basics
 
 - Google sign-in with Auth.js

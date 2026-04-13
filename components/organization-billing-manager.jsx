@@ -6,6 +6,13 @@ import { AlertBanner } from "@/components/alert-banner";
 import appConfig from "@/config/app";
 import { readResponsePayload } from "@/lib/client-api";
 
+const BILLABLE_INTERVALS = new Set(["month", "year"]);
+
+function normalizeBillableInterval(interval, fallback = "month") {
+  const normalized = String(interval || "").trim();
+  return BILLABLE_INTERVALS.has(normalized) ? normalized : fallback;
+}
+
 export function OrganizationBillingManager({ organizationSlug, initialBillingStatus }) {
   const router = useRouter();
   const [billingStatus, setBillingStatus] = useState(initialBillingStatus);
@@ -15,7 +22,7 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
     hasMultipleActive: Boolean(initialBillingStatus?.hasMultipleActiveSubscriptions),
     canMutateSafely: initialBillingStatus?.canMutateSafely ?? true
   });
-  const [interval, setInterval] = useState(initialBillingStatus?.planInterval || "month");
+  const [interval, setInterval] = useState(() => normalizeBillableInterval(initialBillingStatus?.planInterval, "month"));
   const [quantity, setQuantity] = useState("1");
   const [error, setError] = useState(null);
   const [statusMessage, setStatusMessage] = useState(null);
@@ -41,9 +48,7 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
     }
 
     setBillingStatus(result);
-    if (result?.planInterval) {
-      setInterval(result.planInterval);
-    }
+    setInterval((current) => normalizeBillableInterval(result?.planInterval, current));
   };
 
   const refreshSubscriptionsSummary = async () => {
@@ -108,7 +113,7 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
           }
         }
 
-        if (!hasActiveBilling) {
+        if (!hasPaidSubscription) {
           const checkoutResponse = await fetch("/api/billing/checkout", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -160,12 +165,12 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
   const handleChangePlanClick = () => {
     setError(null);
     setStatusMessage(null);
-    if (!hasActiveBilling && effectiveQuantity < 1) {
-      setError("Choose at least 1 seat to start a new plan.");
+    if (!hasPaidSubscription && effectiveQuantity < 1) {
+      setError("Choose at least 1 paid seat to start checkout.");
       return;
     }
-    if (hasActiveBilling && effectiveQuantity < minSeatDelta) {
-      setError("You must keep at least 1 seat on the plan.");
+    if (hasPaidSubscription && effectiveQuantity < minSeatDelta) {
+      setError(`You cannot reduce below your free-seat floor (${ownerFreeSeats} total seats).`);
       return;
     }
     confirmationDialogRef.current?.showModal();
@@ -231,12 +236,15 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
     (canonicalStatus === "cancelled" || canonicalStatus === "canceled" || canonicalStatus === "expired") &&
     Number.isFinite(canonicalPeriodEndTime) &&
     canonicalPeriodEndTime > Date.now();
-  const hasActiveBilling = Boolean(billingStatus?.active || hasCanonicalPeriodEntitlement);
-  const purchasedSeats = hasCanonicalPeriodEntitlement ? Number(canonical?.quantity || 0) : Number(billingStatus?.quantity ?? 0);
+  const ownerFreeSeats = Math.max(Number(billingStatus?.ownerFreeSeats ?? 0), 0);
+  const purchasedSeats = Number(billingStatus?.quantity ?? 0);
+  const purchasedPaidSeats = hasCanonicalPeriodEntitlement
+    ? Math.max(Number(canonical?.quantity || 0), 0)
+    : Math.max(Number(billingStatus?.paidSeats ?? 0), 0);
+  const hasActiveBilling = purchasedSeats > 0 || hasCanonicalPeriodEntitlement;
+  const hasPaidSubscription = Boolean(canonical?.subscriptionId) && (purchasedPaidSeats > 0 || hasCanonicalPeriodEntitlement);
   const usedSeats = Number(billingStatus?.usedSeats ?? 0);
-  const remainingSeats = hasCanonicalPeriodEntitlement
-    ? Math.max(purchasedSeats - usedSeats, 0)
-    : Number(billingStatus?.remainingSeats ?? 0);
+  const remainingSeats = Number(billingStatus?.remainingSeats ?? Math.max(purchasedSeats - usedSeats, 0));
 
   const displayBillingStateMessage =
     hasCanonicalPeriodEntitlement && (!billingStatus?.billingStateMessage || billingStatus?.status === "none")
@@ -244,8 +252,8 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
       : billingStatus?.billingStateMessage;
 
   const isCancelled = canonical?.status === "cancelled" || canonical?.status === "canceled";
-  const isMutationBlocked = subscriptionsSummary.hasMultipleActive || !subscriptionsSummary.canMutateSafely;
-  const shouldResumeBeforeUpdate = isCancelled && hasCanonicalPeriodEntitlement;
+  const isMutationBlocked = hasPaidSubscription && (subscriptionsSummary.hasMultipleActive || !subscriptionsSummary.canMutateSafely);
+  const shouldResumeBeforeUpdate = hasPaidSubscription && isCancelled && hasCanonicalPeriodEntitlement;
   const pricingByInterval = useMemo(() => {
     const monthly = appConfig.pricing.plans.find((plan) => plan.interval === "month");
     const annual = appConfig.pricing.plans.find((plan) => plan.interval === "year");
@@ -256,18 +264,18 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
   }, []);
   const perSeatPrice = interval === "year" ? pricingByInterval.year : pricingByInterval.month;
   const seatDelta = effectiveQuantity;
-  const currentSeatQuantity = Math.max(Number(canonical?.quantity ?? purchasedSeats ?? 0), 0);
-  const maxRemovableSeats = Math.max(currentSeatQuantity - 1, 0);
-  const minSeatDelta = hasActiveBilling ? -maxRemovableSeats : 0;
+  const currentPaidSeatQuantity = Math.max(Number(canonical?.quantity ?? purchasedPaidSeats ?? 0), 0);
+  const maxRemovableSeats = Math.max(currentPaidSeatQuantity, 0);
+  const minSeatDelta = hasPaidSubscription ? -maxRemovableSeats : 0;
   const normalizedSeatDelta = Math.max(seatDelta, minSeatDelta);
   const currentInterval = canonical?.planInterval === "year" ? "year" : "month";
   const currentPerMonth =
     currentInterval === "year"
-      ? (currentSeatQuantity * pricingByInterval.year) / 12
-      : currentSeatQuantity * pricingByInterval.month;
-  const targetSeatQuantity = hasActiveBilling
-    ? Math.max(currentSeatQuantity + normalizedSeatDelta, 1)
-    : Math.max(normalizedSeatDelta, 1);
+      ? (currentPaidSeatQuantity * pricingByInterval.year) / 12
+      : currentPaidSeatQuantity * pricingByInterval.month;
+  const targetSeatQuantity = hasPaidSubscription
+    ? Math.max(currentPaidSeatQuantity + normalizedSeatDelta, 0)
+    : Math.max(normalizedSeatDelta, 0);
   const projectedPerMonth =
     interval === "year"
       ? (targetSeatQuantity * pricingByInterval.year) / 12
@@ -283,7 +291,7 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
     []
   );
   const recurringUnitLabel = interval === "year" ? "year" : "month";
-  const isInvalidSeatReduction = hasActiveBilling && seatDelta < minSeatDelta;
+  const isInvalidSeatReduction = hasPaidSubscription && seatDelta < minSeatDelta;
 
   return (
     <div id="billing" className="rounded-[1.5rem] bg-base-100 p-5">
@@ -301,7 +309,7 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-base-300 bg-base-50 p-3">
-          <div className="text-xs uppercase tracking-[0.16em] text-base-content/55">Purchased seats</div>
+          <div className="text-xs uppercase tracking-[0.16em] text-base-content/55">Total seats</div>
           <div className="mt-1 text-2xl font-semibold text-neutral">{purchasedSeats}</div>
         </div>
         <div className="rounded-xl border border-base-300 bg-base-50 p-3">
@@ -314,10 +322,14 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
         </div>
       </div>
 
+      <div className="mt-3 text-xs text-base-content/65">
+        Free seats: {ownerFreeSeats} | Paid seats: {purchasedPaidSeats}
+      </div>
+
       {billingStatus?.scheduledChange ? (
         <div className="alert alert-info mt-4 text-sm">
           <span>
-            Downgrade scheduled to {billingStatus.scheduledChange.quantity} seats on{" "}
+            Paid-seat downgrade scheduled to {billingStatus.scheduledChange.quantity} paid seats on{" "}
             {billingStatus.scheduledChange.effectiveAt
               ? new Date(billingStatus.scheduledChange.effectiveAt).toLocaleDateString()
               : "renewal"}
@@ -373,9 +385,9 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
 
       <div className="mt-4 flex flex-wrap gap-3">
         <button className="btn btn-primary" onClick={handleChangePlanClick} disabled={isPending || isLifecyclePending || isMutationBlocked}>
-          {isPending ? "Processing..." : hasActiveBilling ? "Update plan" : "Start plan"}
+          {isPending ? "Processing..." : hasPaidSubscription ? "Update paid seats" : "Buy extra seats"}
         </button>
-        {hasActiveBilling ? (
+        {hasPaidSubscription ? (
           isCancelled ? (
             <button
               className="btn btn-outline"
@@ -438,9 +450,9 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
         <div className="modal-box max-w-lg">
           <h3 className="text-lg font-semibold text-neutral">Are you sure?</h3>
           <p className="mt-2 text-sm text-base-content/75">
-            {hasActiveBilling
-              ? "You are about to update your organization plan."
-              : "You are about to start your organization plan."}
+            {hasPaidSubscription
+              ? "You are about to update paid seats on your organization plan."
+              : "You are about to start a paid plan for seats above your free allocation."}
           </p>
           {shouldResumeBeforeUpdate ? (
             <div className="alert alert-warning mt-3 text-sm">
@@ -454,17 +466,17 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
           <div className="mt-4 rounded-xl border border-base-300 bg-base-50 p-3 text-sm">
             <div className="font-medium text-neutral">
               {normalizedSeatDelta > 0
-                ? `${normalizedSeatDelta} additional seat${normalizedSeatDelta === 1 ? "" : "s"} at ${priceFormatter.format(perSeatPrice)} each`
+                ? `${normalizedSeatDelta} additional paid seat${normalizedSeatDelta === 1 ? "" : "s"} at ${priceFormatter.format(perSeatPrice)} each`
                 : normalizedSeatDelta < 0
-                  ? `${Math.abs(normalizedSeatDelta)} seat${Math.abs(normalizedSeatDelta) === 1 ? "" : "s"} scheduled for removal at renewal (${priceFormatter.format(perSeatPrice)} each)`
-                  : `No seat change selected (${priceFormatter.format(perSeatPrice)} per seat)`}
+                  ? `${Math.abs(normalizedSeatDelta)} paid seat${Math.abs(normalizedSeatDelta) === 1 ? "" : "s"} scheduled for removal at renewal (${priceFormatter.format(perSeatPrice)} each)`
+                  : `No paid-seat change selected (${priceFormatter.format(perSeatPrice)} per seat)`}
             </div>
             <div className="mt-1 text-base-content/70">
               Estimated recurring change: {priceFormatter.format(perSeatPrice * normalizedSeatDelta)} / {recurringUnitLabel}
             </div>
             {normalizedSeatDelta < 0 ? (
               <div className="mt-1 text-base-content/70">
-                This decrease will take effect at your next renewal.
+                This paid-seat decrease will take effect at your next renewal.
               </div>
             ) : null}
             <div className="mt-1 text-base-content/70">
@@ -478,7 +490,7 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
             </div>
             {isInvalidSeatReduction ? (
               <div className="mt-2 text-xs font-medium text-error">
-                You must keep at least 1 seat on the plan.
+                You cannot reduce paid seats below 0.
               </div>
             ) : null}
           </div>
@@ -491,9 +503,9 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
                 ? "Processing..."
                 : shouldResumeBeforeUpdate
                   ? "Yes, resume and update"
-                  : hasActiveBilling
-                    ? "Yes, update plan"
-                    : "Yes, start plan"}
+                  : hasPaidSubscription
+                    ? "Yes, update paid seats"
+                    : "Yes, start paid seats"}
             </button>
           </div>
         </div>

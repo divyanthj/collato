@@ -4,6 +4,7 @@ import {
   getBillingStatusForOrganization,
   getOrganizationSubscriptionSummary,
   resolveOrganizationForUser,
+  setLemonSubscriptionCancelAtPeriodEnd,
   updateLemonSubscriptionFromApp
 } from "@/lib/billing";
 import { getDatabase } from "@/lib/mongodb";
@@ -39,16 +40,67 @@ export async function POST(request) {
   const summary = await getOrganizationSubscriptionSummary(organization);
   const subscription = summary.canonical;
 
-  if (!billing.active) {
-    return NextResponse.json({ error: "No active subscription found for this organization." }, { status: 409 });
+  const ownerFreeSeats = Math.max(Number(billing.ownerFreeSeats || 0), 0);
+  const usedSeats = Math.max(Number(billing.usedSeats || 0), 0);
+  const currentPaidSeats = Math.max(Number(subscription?.quantity || billing.paidSeats || 0), 0);
+  const targetPaidSeats = currentPaidSeats + quantity;
+  const targetTotalSeats = ownerFreeSeats + targetPaidSeats;
+
+  if (quantity < 0 && targetPaidSeats < 0) {
+    return NextResponse.json(
+      { error: "Cannot reduce paid seats below 0." },
+      { status: 400 }
+    );
+  }
+
+  if (targetTotalSeats < ownerFreeSeats) {
+    return NextResponse.json(
+      {
+        error: `Cannot reduce total seats below your owner free-seat floor (${ownerFreeSeats}).`
+      },
+      { status: 400 }
+    );
+  }
+
+  if (targetTotalSeats < usedSeats) {
+    return NextResponse.json(
+      { error: "Cannot reduce seats below the number of active members." },
+      { status: 400 }
+    );
+  }
+
+  if (quantity === 0) {
+    return NextResponse.json(
+      {
+        type: "noop",
+        interval: subscription?.planInterval || interval,
+        quantity: currentPaidSeats
+      },
+      { status: 200 }
+    );
+  }
+
+  if (!billing.active && quantity > 0) {
+    return NextResponse.json({ error: "No active billing entitlement found for this organization." }, { status: 409 });
   }
 
   if (!subscription?.subscriptionId) {
+    if (quantity > 0) {
+      return NextResponse.json(
+        {
+          code: "CHECKOUT_REQUIRED",
+          error: "No paid subscription exists yet. Start checkout for the additional paid seats.",
+          checkoutQuantity: quantity
+        },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       {
-        error: "No updatable subscription record found for this organization. Use billing portal to create or relink a subscription first."
+        error: "No paid subscription exists to reduce. Your free-seat floor is already applied."
       },
-      { status: 409 }
+      { status: 400 }
     );
   }
 
@@ -59,15 +111,6 @@ export async function POST(request) {
           "Multiple active subscriptions are linked to this organization. To avoid changing the wrong subscription, update seats in Lemon Squeezy portal."
       },
       { status: 409 }
-    );
-  }
-
-  const currentQuantity = Number(subscription.quantity || billing.quantity || 0);
-  const targetQuantity = Math.max(currentQuantity + quantity, 1);
-  if (targetQuantity < Number(billing.usedSeats || 0)) {
-    return NextResponse.json(
-      { error: "Cannot reduce seats below the number of active members." },
-      { status: 400 }
     );
   }
 
@@ -90,6 +133,55 @@ export async function POST(request) {
       );
     }
 
+    if (targetPaidSeats === 0) {
+      try {
+        const cancelled = await setLemonSubscriptionCancelAtPeriodEnd({
+          subscriptionId: subscription.subscriptionId,
+          cancelAtPeriodEnd: true
+        });
+
+        await subscriptionsCollection.updateOne(
+          { subscriptionId: subscription.subscriptionId },
+          {
+            $set: {
+              organizationSlug: organization.slug,
+              status: cancelled.status,
+              variantId: cancelled.variantId,
+              planInterval: cancelled.planInterval,
+              quantity: cancelled.quantity,
+              renewsAt: cancelled.renewsAt,
+              endsAt: cancelled.endsAt,
+              currentPeriodEnd: cancelled.currentPeriodEnd,
+              portalUrl: cancelled.portalUrl,
+              isLegacyVariant: cancelled.isLegacyVariant,
+              migrationRequired: cancelled.migrationRequired,
+              scheduledChange: {
+                type: "cancel_at_period_end",
+                effectiveAt,
+                quantity: 0
+              },
+              updatedAt: new Date(),
+              lastEvent: "manual_schedule_cancel"
+            }
+          }
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Could not schedule cancellation for paid seats";
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+
+      return NextResponse.json(
+        {
+          type: "scheduled_downgrade",
+          quantity: targetPaidSeats,
+          totalQuantity: targetTotalSeats,
+          effectiveAt
+        },
+        { status: 200 }
+      );
+    }
+
     await subscriptionsCollection.updateOne(
       { subscriptionId: subscription.subscriptionId },
       {
@@ -98,7 +190,7 @@ export async function POST(request) {
           scheduledChange: {
             type: "seat_downgrade_at_renewal",
             effectiveAt,
-            quantity: targetQuantity
+            quantity: targetPaidSeats
           },
           updatedAt: new Date(),
           lastEvent: "manual_schedule_downgrade"
@@ -109,7 +201,8 @@ export async function POST(request) {
     return NextResponse.json(
       {
         type: "scheduled_downgrade",
-        quantity: targetQuantity,
+        quantity: targetPaidSeats,
+        totalQuantity: targetTotalSeats,
         effectiveAt
       },
       { status: 200 }
@@ -156,7 +249,8 @@ export async function POST(request) {
       {
         type: "updated",
         interval: updated.planInterval,
-        quantity: updated.quantity
+        quantity: updated.quantity,
+        totalQuantity: ownerFreeSeats + Math.max(Number(updated.quantity || 0), 0)
       },
       { status: 200 }
     );

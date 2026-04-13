@@ -20,7 +20,11 @@ export async function POST(request) {
   const sessionEmail = session.user.email.toLowerCase();
 
   if (!["month", "year"].includes(interval)) {
-    return NextResponse.json({ error: "Invalid billing interval" }, { status: 400 });
+    const intervalError =
+      mode === "new_subscription"
+        ? "Invalid billing interval. Please choose Monthly or Annual before continuing."
+        : "Invalid billing interval";
+    return NextResponse.json({ error: intervalError, code: "INVALID_INTERVAL" }, { status: 400 });
   }
 
   if (!Number.isInteger(quantity) || quantity < 1) {

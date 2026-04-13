@@ -168,6 +168,9 @@ export default async function LandingPage() {
               © {currentYear} {appConfig.appName}
             </div>
             <div className="flex flex-wrap items-center gap-4">
+              <Link href="/contact" className="link link-hover text-base-content/75">
+                Contact
+              </Link>
               <Link href="/tos" className="link link-hover text-base-content/75">
                 Terms of Service
               </Link>

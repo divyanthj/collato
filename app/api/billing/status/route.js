@@ -19,6 +19,8 @@ export async function GET(request) {
       {
         organizationSlug: null,
         active: billingStatus.active,
+        ownerFreeSeats: billingStatus.ownerFreeSeats ?? 0,
+        paidSeats: billingStatus.paidSeats ?? 0,
         quantity: billingStatus.quantity,
         usedSeats: billingStatus.usedSeats,
         remainingSeats: billingStatus.remainingSeats,
@@ -48,6 +50,8 @@ export async function GET(request) {
     {
       organizationSlug: organization.slug,
       active: billing.active,
+      ownerFreeSeats: billing.ownerFreeSeats ?? 0,
+      paidSeats: billing.paidSeats ?? 0,
       quantity: billing.quantity,
       usedSeats: billing.usedSeats,
       remainingSeats: billing.remainingSeats,
