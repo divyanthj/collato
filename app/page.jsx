@@ -171,6 +171,9 @@ export default async function LandingPage() {
               <Link href="/contact" className="link link-hover text-base-content/75">
                 Contact
               </Link>
+              <Link href="/help" className="link link-hover text-base-content/75">
+                Help
+              </Link>
               <Link href="/tos" className="link link-hover text-base-content/75">
                 Terms of Service
               </Link>
