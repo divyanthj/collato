@@ -27,6 +27,7 @@ const pillars = [
 
 export default async function LandingPage() {
   const session = await auth();
+  const currentYear = new Date().getFullYear();
 
   return (
     <main className="min-h-screen">
@@ -159,6 +160,24 @@ export default async function LandingPage() {
       </section>
 
       <PricingSection pricing={appConfig.pricing} isAuthenticated={Boolean(session?.user)} />
+
+      <section className="mx-auto max-w-7xl px-6 pb-12 lg:px-10">
+        <div className="glass-panel rounded-[2rem] px-6 py-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-base-content/70">
+            <div>
+              © {currentYear} {appConfig.appName}
+            </div>
+            <div className="flex flex-wrap items-center gap-4">
+              <Link href="/tos" className="link link-hover text-base-content/75">
+                Terms of Service
+              </Link>
+              <Link href="/privacy-policy" className="link link-hover text-base-content/75">
+                Privacy Policy
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
