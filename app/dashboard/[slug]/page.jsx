@@ -215,7 +215,7 @@ export default async function WorkspaceDetailPage({ params, searchParams }) {
               </div>
 
               <div className="mt-6">
-                <WorkspaceMemberManager workspace={workspace} canManageMembers={permissions.canManageWorkspaceMembers}/>
+                <WorkspaceMemberManager workspace={workspace} canManageMembers={permissions.canManageWorkspaceMembers} organizationMembers={organization.currentMembers ?? organization.members ?? []}/>
               </div>
             </div>
 

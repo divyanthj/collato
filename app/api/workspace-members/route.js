@@ -40,7 +40,8 @@ export const POST = auth(async (request) => {
     }
     catch (error) {
         const message = error instanceof Error ? error.message : "Could not add member";
-        const status = message === "Only workspace owners or organization admins can manage workspace access"
+        const status = message === "Only workspace owners or organization admins can manage workspace access" ||
+            message === "Only workspace owners/admins or organization owners can manage workspace access"
             ? 403
             : message === "Workspace not found"
                 ? 404
@@ -69,7 +70,8 @@ export const DELETE = auth(async (request) => {
     }
     catch (error) {
         const message = error instanceof Error ? error.message : "Could not remove member";
-        const status = message === "Only workspace owners or organization admins can manage workspace access"
+        const status = message === "Only workspace owners or organization admins can manage workspace access" ||
+            message === "Only workspace owners/admins or organization owners can manage workspace access"
             ? 403
             : message === "Workspace not found"
                 ? 404

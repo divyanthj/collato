@@ -155,6 +155,28 @@ export default async function WorkspacePage({ searchParams }) {
         </aside>
 
         <section className="min-w-0 space-y-4">
+          {(pendingOrganizationInvites.length > 0 || pendingWorkspaceInvites.length > 0) ? (
+            <div className="glass-panel rounded-[2rem] p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Invitations</div>
+                  <h2 className="mt-2 text-2xl font-semibold text-neutral">Invitation inbox</h2>
+                </div>
+                <div className="badge badge-outline self-start sm:self-center">
+                  {pendingOrganizationInvites.length + pendingWorkspaceInvites.length} pending
+                </div>
+              </div>
+              <div className="mt-6">
+                <InviteInbox
+                  organizationInvites={pendingOrganizationInvites}
+                  workspaceInvites={pendingWorkspaceInvites}
+                  title="Pending invitations"
+                  description="Accept or decline pending organization and workspace invites in one place."
+                />
+              </div>
+            </div>
+          ) : null}
+
           <div className="glass-panel rounded-[2rem] p-6">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1">
@@ -228,17 +250,6 @@ export default async function WorkspacePage({ searchParams }) {
               </div>
               <div className="badge badge-outline self-start sm:self-center">{workspaces.length} total</div>
             </div>
-
-            {(pendingOrganizationInvites.length > 0 || pendingWorkspaceInvites.length > 0) ? (
-              <div className="mt-6">
-                <InviteInbox
-                  organizationInvites={pendingOrganizationInvites}
-                  workspaceInvites={pendingWorkspaceInvites}
-                  title="Invitation inbox"
-                  description="Accept or decline pending organization and workspace invites in one place."
-                />
-              </div>
-            ) : null}
 
             <div className="mt-6 space-y-4">
               {workspaces.length > 0 ? (workspaces.map((workspace) => (<div key={workspace.slug} className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5">
