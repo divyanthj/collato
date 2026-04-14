@@ -520,7 +520,7 @@ export function KnowledgeBaseManager({
                 </div>
                 {file.extractionSummary ? <p className="mt-3 text-xs uppercase tracking-[0.18em] text-primary/60">{file.extractionSummary}</p> : null}
                 {file.blobUrl ? <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-                    <a className="link link-primary" href={file.blobDownloadUrl || file.blobUrl} target="_blank" rel="noreferrer">
+                    <a className="link link-primary" href={`/api/workspace-files/${file.id}/download`} target="_blank" rel="noreferrer">
                       Open original file
                     </a>
                     <span className="text-base-content/55">
