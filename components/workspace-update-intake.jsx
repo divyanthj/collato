@@ -3,6 +3,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 import { trackDatafastGoal } from "@/lib/client-analytics";
+import { getClipboardImageFile } from "@/lib/clipboard-images";
 import { VoiceInputButton } from "@/components/voice-input-button";
 import { WaveformCanvas } from "@/components/waveform-canvas";
 
@@ -125,6 +126,19 @@ export function WorkspaceUpdateIntake({
         .map((event) => `${event.actorEmail}|||${event.actor}`))], [savedActivityEvents]);
     const handleSupportFilesChange = (files) => {
         setSupportFiles(Array.from(files ?? []));
+    };
+    const handlePasteSupportingScreenshot = (event) => {
+        if (!isAuthenticated) {
+            return;
+        }
+        const imageFile = getClipboardImageFile(event, { prefix: "update-screenshot" });
+        if (!imageFile) {
+            return;
+        }
+        event.preventDefault();
+        setSupportFiles((current) => [...current, imageFile]);
+        setError(null);
+        setStatusMessage(`Screenshot pasted: ${imageFile.name}. It will upload as a supporting file.`);
     };
     const handleNotificationPreferenceChange = async (nextPreference) => {
         if (!selectedWorkspace) {
@@ -477,7 +491,7 @@ export function WorkspaceUpdateIntake({
                 <span className="text-xs uppercase tracking-[0.2em] text-base-content/50">Mic input</span>
               </div>
             </div>
-            <textarea className="textarea textarea-bordered h-40" value={body} onChange={(event) => setBody(event.target.value)} disabled={!isAuthenticated} placeholder="Example: Visited the site today. The team confirmed the revised schedule, shared the facade markups, and asked for the requirement checklist before Friday."/>
+            <textarea className="textarea textarea-bordered h-40" value={body} onChange={(event) => setBody(event.target.value)} onPaste={handlePasteSupportingScreenshot} disabled={!isAuthenticated} placeholder="Example: Visited the site today. The team confirmed the revised schedule, shared the facade markups, and asked for the requirement checklist before Friday."/>
           </label>
 
           <label className="form-control">
@@ -487,6 +501,9 @@ export function WorkspaceUpdateIntake({
             <input key={supportFileInputKey} type="file" className="file-input file-input-bordered" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.doc,.docx,.txt,.csv,.xlsx" onChange={(event) => handleSupportFilesChange(event.target.files)} disabled={!isAuthenticated}/>
             <div className="mt-2 text-xs text-base-content/60">
               Allowed: images, PDF, DOC/DOCX, TXT, CSV, XLSX.
+            </div>
+            <div className="mt-1 text-xs text-base-content/60">
+              Tip: paste a screenshot with Ctrl+V while focused in Raw update.
             </div>
             {supportFiles.length > 0 ? (<div className="mt-2 text-xs text-base-content/70">
                 {supportFiles.length} file{supportFiles.length === 1 ? "" : "s"} selected: {supportFiles.map((file) => file.name).join(", ")}

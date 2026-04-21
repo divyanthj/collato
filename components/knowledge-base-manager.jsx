@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 import { trackDatafastGoal } from "@/lib/client-analytics";
+import { getClipboardImageFile } from "@/lib/clipboard-images";
 import { VoiceInputButton } from "@/components/voice-input-button";
 import { WaveformCanvas } from "@/components/waveform-canvas";
 
@@ -109,6 +110,19 @@ export function KnowledgeBaseManager({
     };
     const handleFileChange = async (file) => {
         setSelectedFile(file);
+    };
+    const handlePasteScreenshot = (event) => {
+        if (!isAuthenticated) {
+            return;
+        }
+        const imageFile = getClipboardImageFile(event, { prefix: "knowledge-screenshot" });
+        if (!imageFile) {
+            return;
+        }
+        event.preventDefault();
+        setSelectedFile(imageFile);
+        setError(null);
+        setSummaryMessage(`Screenshot pasted: ${imageFile.name}. Save to upload it to the knowledge base.`);
     };
     const saveKnowledgeNote = async () => {
         if (!selectedWorkspace || !knowledgeBody.trim()) {
@@ -336,13 +350,19 @@ export function KnowledgeBaseManager({
                   <span className="label-text">Choose file</span>
                 </div>
                 <input key={fileInputKey} type="file" className="file-input file-input-bordered" onChange={(event) => void handleFileChange(event.target.files?.[0] ?? null)} disabled={!isAuthenticated || workspaces.length === 0}/>
+                {selectedFile ? (<div className="mt-2 text-xs text-base-content/70">
+                    Selected file: {selectedFile.name}
+                  </div>) : null}
+                <div className="mt-2 text-xs text-base-content/60">
+                  Tip: paste a screenshot with Ctrl+V to attach it directly.
+                </div>
               </label>
 
               <label className="form-control">
                 <div className="label">
                   <span className="label-text">Additional notes</span>
                 </div>
-                <textarea className="textarea textarea-bordered h-40" value={manualNotes} onChange={(event) => setManualNotes(event.target.value)} disabled={!isAuthenticated || workspaces.length === 0} placeholder="Optional: add context, what this file is for, or the key facts the team should remember."/>
+                <textarea className="textarea textarea-bordered h-40" value={manualNotes} onChange={(event) => setManualNotes(event.target.value)} onPaste={handlePasteScreenshot} disabled={!isAuthenticated || workspaces.length === 0} placeholder="Optional: add context, what this file is for, or the key facts the team should remember."/>
               </label>
             </div>
           </div>
@@ -360,7 +380,7 @@ export function KnowledgeBaseManager({
                 <span className="text-xs uppercase tracking-[0.2em] text-base-content/50">Mic input</span>
               </div>
             </div>
-            <textarea className="textarea textarea-bordered h-32" value={knowledgeBody} onChange={(event) => setKnowledgeBody(event.target.value)} disabled={!isAuthenticated || workspaces.length === 0} placeholder="Paste or dictate plain text knowledge. This will be saved as a searchable knowledge item in this workspace."/>
+            <textarea className="textarea textarea-bordered h-32" value={knowledgeBody} onChange={(event) => setKnowledgeBody(event.target.value)} onPaste={handlePasteScreenshot} disabled={!isAuthenticated || workspaces.length === 0} placeholder="Paste or dictate plain text knowledge. This will be saved as a searchable knowledge item in this workspace."/>
           </label>
 
           {isRecording ? (<div className="rounded-[1.25rem] border border-primary/20 bg-base-100 p-4">
