@@ -4,6 +4,43 @@ This is the canonical running log for implementation progress updates.
 
 When asked to "update progress", update this file.
 
+## 2026-04-21
+
+### Meeting Context
+
+- Reviewed latest GreenSketch onboarding call transcript (`GreenSketch-x-Collato-Onboarding-210c38f5-739e.json`, ~42 minutes).
+- Session focus was workspace onboarding, file ingestion, and report-generation expectations.
+
+### Confirmed Working In Product
+
+- Workspace onboarding flow and membership/invite access were demonstrated as working.
+- Users can add workspace context and use current Ask/Task workflows.
+- Data upload flow is usable in general (including successful upload attempts during session).
+
+### Issues Identified During Demo
+
+- PDF upload reliability issue observed during live onboarding.
+- Error behavior around upload/processing needs hardening (intermittent failure path surfaced).
+- Cloud-source ingestion expectation is clear, but native OneDrive/Google Drive connector coverage is not yet complete.
+
+### Requested / Prioritized By GreenSketch
+
+- High-priority requirement: automated monthly report generation at the beginning of each month.
+- Output expectation: report should be generated as PDF and be ready to share with clients.
+- Report depth expectation: long-form, comprehensive output (not just short 1-2 page summaries).
+- Product direction reaffirmed: centralize scattered information sources into a single workspace system before wider team rollout.
+
+### Next Implementation Targets
+
+- Stabilize PDF ingestion path and close upload bug(s) surfaced during onboarding.
+- Harden upload error handling and user feedback for failed file-processing states.
+- Build scheduled monthly report generation workflow (generation + PDF export + delivery-ready output).
+- Continue improving source-ingestion breadth for client file locations (including OneDrive/Drive-style workflows).
+
+### Notes
+
+- As of this update, GreenSketch has only a small initial user cohort onboarded; broader onboarding is expected after flow stabilization.
+
 ## 2026-04-09
 
 ### Completed

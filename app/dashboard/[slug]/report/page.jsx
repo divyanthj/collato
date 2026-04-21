@@ -4,15 +4,17 @@ import { WorkspaceProgressReportView } from "@/components/workspace-progress-rep
 import { WorkspaceSubnav } from "@/components/workspace-subnav";
 import { resolveWorkspaceRouteForUser } from "@/lib/data";
 import { reportTemplateDefinitions } from "@/lib/report-templates";
+import { getDisplayNameFromEmail } from "@/lib/user-display-name";
 export default async function WorkspaceReportPage({ params }) {
     const session = await auth();
     if (!session?.user?.email) {
         notFound();
     }
+    const currentUserName = getDisplayNameFromEmail(session.user.email, "Signed in user", session.user.name);
     const resolution = await resolveWorkspaceRouteForUser(
         params.slug,
         session.user.email,
-        session.user.name ?? "Signed in user"
+        currentUserName
     );
     if (resolution.type === "organization") {
         const workspaceQuery = resolution.workspaceSlug ? `&workspace=${encodeURIComponent(resolution.workspaceSlug)}` : "";

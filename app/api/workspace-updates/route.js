@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getAuthorizedWorkspace, saveWorkspaceUpdate } from "@/lib/data";
+import { getDisplayNameFromEmail } from "@/lib/user-display-name";
 import { queueWorkspaceUpdateNotifications } from "@/lib/workspace-update-notifications";
 export const POST = auth(async (request) => {
     if (!request.auth?.user?.email) {
@@ -21,7 +22,7 @@ export const POST = auth(async (request) => {
         inputMethod: body.inputMethod === "voice" ? "voice" : "typed",
         body: String(body.body),
         createdBy: request.auth.user.email,
-        createdByName: request.auth.user.name ?? "Signed in user",
+        createdByName: getDisplayNameFromEmail(request.auth.user.email, "Signed in user", request.auth.user.name),
         structured: body.structured
     });
     try {

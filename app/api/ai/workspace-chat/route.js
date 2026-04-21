@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getAuthorizedWorkspace, getWorkspaceChatContext, saveWorkspaceChatMessage } from "@/lib/data";
 import { openai } from "@/lib/openai";
+import { getDisplayNameFromEmail } from "@/lib/user-display-name";
 function buildFallbackFollowUps(question) {
     const trimmed = question.trim();
     return [
@@ -89,7 +90,7 @@ ${question}`
                     role: "user",
                     text: question,
                     createdBy: request.auth.user.email,
-                    createdByName: request.auth.user.name ?? "Signed in user"
+                    createdByName: getDisplayNameFromEmail(request.auth.user.email, "Signed in user", request.auth.user.name)
                 });
                 await saveWorkspaceChatMessage({
                     workspaceSlug,
@@ -98,7 +99,7 @@ ${question}`
                     sources,
                     followUps,
                     createdBy: request.auth.user.email,
-                    createdByName: request.auth.user.name ?? "Signed in user"
+                    createdByName: getDisplayNameFromEmail(request.auth.user.email, "Signed in user", request.auth.user.name)
                 });
                 controller.enqueue(encoder.encode(`${JSON.stringify({
                     type: "meta",

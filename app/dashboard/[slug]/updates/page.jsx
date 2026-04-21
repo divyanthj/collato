@@ -3,15 +3,17 @@ import { auth } from "@/auth";
 import { WorkspaceUpdateIntake } from "@/components/workspace-update-intake";
 import { WorkspaceSubnav } from "@/components/workspace-subnav";
 import { resolveWorkspaceRouteForUser } from "@/lib/data";
+import { getDisplayNameFromEmail } from "@/lib/user-display-name";
 export default async function WorkspaceUpdatesPage({ params }) {
     const session = await auth();
     if (!session?.user?.email) {
         notFound();
     }
+    const currentUserName = getDisplayNameFromEmail(session.user.email, "Signed in user", session.user.name);
     const resolution = await resolveWorkspaceRouteForUser(
         params.slug,
         session.user.email,
-        session.user.name ?? "Signed in user"
+        currentUserName
     );
     if (resolution.type === "organization") {
         const workspaceQuery = resolution.workspaceSlug ? `&workspace=${encodeURIComponent(resolution.workspaceSlug)}` : "";
@@ -58,7 +60,7 @@ export default async function WorkspaceUpdatesPage({ params }) {
               [workspace.slug]: permissions.workspaceNotificationPreference ?? "immediate"
             }}
             isAuthenticated={Boolean(session.user.email)}
-            currentUserName={session.user.name ?? "Signed in user"}
+            currentUserName={currentUserName}
             currentUserEmail={session.user.email}
             canManageAiPrivacy={permissions.organizationRole === "owner"}
           />

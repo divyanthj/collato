@@ -5,6 +5,7 @@ import { AlertBanner } from "@/components/alert-banner";
 import { WorkspaceDangerZone } from "@/components/workspace-danger-zone";
 import { WorkspaceMemberManager } from "@/components/workspace-member-manager";
 import { resolveWorkspaceRouteForUser } from "@/lib/data";
+import { getDisplayNameFromEmail } from "@/lib/user-display-name";
 function readSearchParam(value) {
     if (Array.isArray(value)) {
         return String(value[0] ?? "");
@@ -16,10 +17,11 @@ export default async function WorkspaceDetailPage({ params, searchParams }) {
     if (!session?.user?.email) {
         notFound();
     }
+    const currentUserName = getDisplayNameFromEmail(session.user.email, "Signed in user", session.user.name);
     const resolution = await resolveWorkspaceRouteForUser(
         params.slug,
         session.user.email,
-        session.user.name ?? "Signed in user"
+        currentUserName
     );
     if (resolution.type === "organization") {
         const workspaceQuery = resolution.workspaceSlug ? `&workspace=${encodeURIComponent(resolution.workspaceSlug)}` : "";

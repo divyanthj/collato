@@ -13,6 +13,7 @@ import { OrganizationMemberManager } from "@/components/organization-member-mana
 import { AlertBanner } from "@/components/alert-banner";
 import { assertUserCanCreateOrganization } from "@/lib/billing";
 import { createOrganization, getWorkspaceDashboardData } from "@/lib/data";
+import { getDisplayNameFromEmail } from "@/lib/user-display-name";
 
 function readSearchParam(value) {
     if (Array.isArray(value)) {
@@ -23,6 +24,7 @@ function readSearchParam(value) {
 
 export default async function WorkspacePage({ searchParams }) {
     const session = await auth();
+    const signedInUserName = getDisplayNameFromEmail(session?.user?.email, "Signed in user", session?.user?.name);
     const postCheckoutCreateOrg = readSearchParam(searchParams?.postCheckoutCreateOrg) === "1";
     const postCheckoutOrgName = readSearchParam(searchParams?.postCheckoutOrgName);
     let postCheckoutError = "";
@@ -87,7 +89,7 @@ export default async function WorkspacePage({ searchParams }) {
         return (<main className="min-h-screen px-4 py-6 lg:px-6">
       <section className="mx-auto max-w-7xl">
         <AccessGateway
-          displayName={session.user.name ?? ""}
+          displayName={signedInUserName}
           suggestedOrganizationName={accessGate.suggestedOrganizationName}
           hasOwnedOrganization={accessGate.hasOwnedOrganization}
           accessibleOrganizations={accessGate.accessibleOrganizations ?? []}
@@ -119,7 +121,7 @@ export default async function WorkspacePage({ searchParams }) {
             <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Account</div>
             {session?.user ? (<div className="mt-3 space-y-3">
                 <div>
-                  <div className="font-semibold text-neutral">{session.user.name ?? "Signed in user"}</div>
+                  <div className="font-semibold text-neutral">{signedInUserName}</div>
                   <div className="text-sm text-base-content/60">{session.user.email}</div>
                 </div>
                 <form action={async () => {

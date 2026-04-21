@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { createWorkspaceTask, getAuthorizedWorkspace } from "@/lib/data";
+import { getDisplayNameFromEmail } from "@/lib/user-display-name";
 export const POST = auth(async (request) => {
     if (!request.auth?.user?.email) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -25,7 +26,7 @@ export const POST = auth(async (request) => {
         dueDate: body.dueDate ? String(body.dueDate) : null,
         sourceUpdateId: String(body.sourceUpdateId ?? ""),
         createdBy: request.auth.user.email,
-        createdByName: request.auth.user.name ?? "Signed in user"
+        createdByName: getDisplayNameFromEmail(request.auth.user.email, "Signed in user", request.auth.user.name)
     });
     return NextResponse.json(task, { status: 201 });
 });
