@@ -8,6 +8,21 @@ import { trackDatafastGoal } from "@/lib/client-analytics";
 function makeId() {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
+function getSourceLabel(source) {
+    if (typeof source === "string") {
+        return source;
+    }
+    if (!source || typeof source !== "object") {
+        return "";
+    }
+    return String(source.label ?? "");
+}
+function getSourceHref(source) {
+    if (!source || typeof source !== "object") {
+        return "";
+    }
+    return typeof source.href === "string" ? source.href : "";
+}
 function MarkdownAnswer({ text }) {
     return (<div className="prose prose-sm max-w-none text-base-content prose-headings:my-2 prose-headings:text-base-content prose-p:my-2 prose-li:my-1 prose-pre:my-3 prose-pre:overflow-x-auto prose-pre:rounded-xl prose-pre:bg-neutral prose-pre:p-3 prose-pre:text-neutral-content prose-code:rounded prose-code:bg-base-300 prose-code:px-1 prose-code:py-0.5 prose-code:text-xs">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -175,9 +190,22 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
                   {message.role === "assistant" && message.sources && message.sources.length > 0 ? (<div className="mt-4">
                       <div className="text-xs uppercase tracking-[0.18em] opacity-60">Sources</div>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {message.sources.map((source) => (<span key={source} className="badge badge-outline">
-                            {source}
-                          </span>))}
+                        {message.sources.map((source, index) => {
+                        const label = getSourceLabel(source);
+                        const href = getSourceHref(source);
+                        const key = `${label}-${index}`;
+                        if (!label) {
+                            return null;
+                        }
+                        if (!href) {
+                            return (<span key={key} className="badge badge-outline">
+                                {label}
+                              </span>);
+                        }
+                        return (<a key={key} className="badge badge-outline cursor-pointer hover:badge-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" href={href} target={href.startsWith("/api/") ? "_blank" : undefined} rel={href.startsWith("/api/") ? "noreferrer" : undefined}>
+                              {label}
+                            </a>);
+                    })}
                       </div>
                     </div>) : null}
 

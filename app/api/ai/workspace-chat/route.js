@@ -66,7 +66,14 @@ ${question}`
         async start(controller) {
             try {
                 let assistantText = "";
-                const sources = context.sourceLabels.slice(0, 4);
+                const sources = (Array.isArray(context.sourceReferences) && context.sourceReferences.length > 0
+                    ? context.sourceReferences
+                    : context.sourceLabels.map((label) => ({
+                        label,
+                        sourceType: "",
+                        sourceId: "",
+                        href: ""
+                    }))).slice(0, 4);
                 const followUps = buildFallbackFollowUps(question);
                 for await (const event of stream) {
                     if (event.type === "response.output_text.delta") {
