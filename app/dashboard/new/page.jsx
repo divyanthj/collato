@@ -28,9 +28,9 @@ export default async function NewWorkspacePage({ searchParams }) {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="section-kicker">New workspace</p>
-              <h1 className="mt-2 text-4xl font-semibold text-neutral">Create a workspace</h1>
+              <h1 className="mt-2 text-4xl font-semibold text-neutral">Create your first workspace</h1>
               <p className="mt-4 max-w-3xl text-base leading-8 text-base-content/72">
-                Set up a new workspace first, then go into it to add members, files, updates, and chatbot queries in separate focused screens.
+                Keep setup light: name the workspace, optionally add a short description, and continue into the guided onboarding flow.
               </p>
             </div>
             <Link href={`/dashboard${organizationQuery}`} className="btn btn-outline">

@@ -46,6 +46,9 @@ export default async function WorkspaceKnowledgePage({ params }) {
                 <p className="mt-4 max-w-3xl text-base leading-8 text-base-content/72">
                   Save reusable references here: documents, notes, transcripts, and key facts your team will come back to. For chronological progress logs, use Updates.
                 </p>
+                <div className="mt-4 rounded-[1.25rem] border border-base-300 bg-base-100/85 px-4 py-3 text-sm leading-6 text-base-content/70">
+                  <span className="font-medium text-neutral">Use this when:</span> you are adding long-lived source material the team may need to search, summarize, or reuse later.
+                </div>
               </div>
           </div>
           <WorkspaceSubnav workspaceSlug={workspace.slug} activeTab="knowledge"/>

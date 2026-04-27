@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { AlertBanner } from "@/components/alert-banner";
 import { InviteInbox } from "@/components/invite-inbox";
 import { readResponsePayload } from "@/lib/client-api";
+import { trackDatafastGoal } from "@/lib/client-analytics";
 
 export function AccessGateway({
   displayName,
@@ -27,9 +28,19 @@ export function AccessGateway({
 
   const normalizedQuantity = Number.isInteger(Number(quantity)) && Number(quantity) > 0 ? Number(quantity) : 1;
 
+  useEffect(() => {
+    trackDatafastGoal("access_gateway_viewed", {
+      requires_checkout: requiresCheckout ? "yes" : "no",
+      has_invites: pendingOrganizationInvites.length + pendingWorkspaceInvites.length > 0 ? "yes" : "no"
+    });
+  }, [pendingOrganizationInvites.length, pendingWorkspaceInvites.length, requiresCheckout]);
+
   const handleCreateOrganization = () => {
     setError(null);
     setSuccessMessage(null);
+    trackDatafastGoal("organization_created_started", {
+      source: "access_gateway"
+    });
 
     startTransition(async () => {
       try {
@@ -45,6 +56,10 @@ export function AccessGateway({
         }
 
         setSuccessMessage(`You now have access to ${result.name}.`);
+        trackDatafastGoal("organization_created", {
+          source: "access_gateway",
+          organization_slug: result.slug || ""
+        });
         if (result?.slug) {
           router.push(`/dashboard?org=${encodeURIComponent(result.slug)}&orgCreated=1`);
           return;
@@ -59,6 +74,11 @@ export function AccessGateway({
   const handleStartSubscription = () => {
     setError(null);
     setSuccessMessage(null);
+    trackDatafastGoal("checkout_started", {
+      source: "access_gateway",
+      interval,
+      quantity: normalizedQuantity
+    });
 
     startTransition(async () => {
       try {
@@ -87,13 +107,30 @@ export function AccessGateway({
   return (
     <div className="glass-panel rounded-[2.5rem] p-8 lg:p-10">
       <div>
-        <p className="section-kicker">Access gateway</p>
+        <p className="section-kicker">Workspace setup</p>
         <h1 className="mt-3 max-w-4xl text-4xl font-semibold leading-tight text-neutral lg:text-5xl">
-          Welcome{displayName ? `, ${displayName}` : ""}. Choose how you want to enter Collato.
+          Welcome{displayName ? `, ${displayName}` : ""}. Let&apos;s get your first workspace ready.
         </h1>
         <p className="mt-4 max-w-3xl text-base leading-8 text-base-content/72">
-          To access workspaces, create your own organization or join one through an invite.
+          The organization structure stays in place, but the goal here is simple: unlock access, create your workspace, and start adding project context.
         </p>
+        <div className="mt-6 grid gap-3 md:grid-cols-4">
+          {[
+            "1. Account confirmed",
+            requiresCheckout ? "2. Billing ready" : "2. Organization ready",
+            "3. Workspace details",
+            "4. Add context"
+          ].map((step, index) => (
+            <div
+              key={step}
+              className={`rounded-[1.25rem] border px-4 py-3 text-sm ${
+                index < 2 ? "border-primary/25 bg-primary/8 text-neutral" : "border-base-300 bg-base-100 text-base-content/65"
+              }`}
+            >
+              {step}
+            </div>
+          ))}
+        </div>
         <div className="mt-5">
           <button
             type="button"
@@ -123,7 +160,9 @@ export function AccessGateway({
           <div id="access-gateway-billing" className="rounded-[2rem] border border-primary/15 bg-base-100 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Option 1</div>
+                <div className="text-xs uppercase tracking-[0.24em] text-primary/60">
+                  {requiresCheckout ? "Step 2 of 4" : "Step 2 of 4"}
+                </div>
                 <h2 className="mt-2 text-2xl font-semibold text-neutral">
                   {requiresCheckout ? "Start subscription" : "Create your own organization"}
                 </h2>
@@ -135,8 +174,8 @@ export function AccessGateway({
 
             <p className="mt-4 text-sm leading-7 text-base-content/70">
               {requiresCheckout
-                ? "Choose billing and seats first. After payment, return here to create your organization."
-                : "Start your own organization and begin setting up workspaces for your team."}
+                ? "Choose billing first so Collato can unlock organization access. Right after checkout, you come back here and continue into workspace setup."
+                : "Create the organization that will hold your workspaces. We keep the structure in the background so you can move straight into setup next."}
             </p>
 
             {requiresCheckout ? (
@@ -162,7 +201,7 @@ export function AccessGateway({
                   onClick={handleStartSubscription}
                   disabled={isPending || normalizedQuantity < 1}
                 >
-                  {isPending ? "Redirecting..." : "Start subscription"}
+                  {isPending ? "Redirecting..." : "Unlock workspace setup"}
                 </button>
               </div>
             ) : (
@@ -180,19 +219,25 @@ export function AccessGateway({
                 onClick={handleCreateOrganization}
                 disabled={isPending || hasOwnedOrganization || !organizationName.trim()}
               >
-                {hasOwnedOrganization ? "Organization already created" : isPending ? "Creating..." : "Create organization"}
+                {hasOwnedOrganization ? "Organization already created" : isPending ? "Creating..." : "Create organization and continue"}
               </button>
               </div>
             )}
+
+            <div className="mt-4 rounded-[1.25rem] bg-base-200/65 p-4 text-sm leading-6 text-base-content/68">
+              {requiresCheckout
+                ? "What unlocks next: organization creation, workspace setup, knowledge capture, updates, reports, and workspace chat."
+                : "Next after this step: you will land in workspace creation with fewer required fields and one clear primary action."}
+            </div>
           </div>
         </div>
 
         <div className="space-y-5">
           <div className="rounded-[2rem] bg-neutral p-6 text-neutral-content">
-            <div className="text-xs uppercase tracking-[0.24em] text-secondary">Option 2</div>
+            <div className="text-xs uppercase tracking-[0.24em] text-secondary">Alternative path</div>
             <h2 className="mt-2 text-2xl font-semibold">Wait for an invite</h2>
             <p className="mt-3 text-sm leading-7 text-neutral-content/78">
-              Workspace access still follows org-level and workspace-level permissions, but accepting a workspace invite will activate both when possible.
+              If someone already invited you, accept it here and skip owner setup. You should reach a usable workspace without going through billing or org creation yourself.
             </p>
           </div>
           <InviteInbox

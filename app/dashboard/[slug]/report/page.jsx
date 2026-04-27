@@ -47,6 +47,9 @@ export default async function WorkspaceReportPage({ params }) {
               <p className="mt-4 max-w-3xl text-base leading-8 text-base-content/72">
                 Generate a clean progress summary from the workspace knowledge, captured updates, and tracked tasks.
               </p>
+              <div className="mt-4 rounded-[1.25rem] border border-base-300 bg-base-100/85 px-4 py-3 text-sm leading-6 text-base-content/70">
+                <span className="font-medium text-neutral">Use this when:</span> you are ready to compile the current workspace picture into a shareable progress summary.
+              </div>
             </div>
           </div>
           <WorkspaceSubnav workspaceSlug={workspace.slug} activeTab="report"/>

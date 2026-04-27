@@ -9,13 +9,13 @@ export const POST = auth(async (request) => {
     const name = String(body.name ?? "").trim();
     const description = String(body.description ?? "").trim();
     const organizationSlug = String(body.organizationSlug ?? "").trim();
-    if (!name || !description || !organizationSlug) {
+    if (!name || !organizationSlug) {
         return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     try {
         const workspace = await createWorkspace({
             name,
-            description,
+            description: description || "Workspace created to collect project context, updates, and next steps.",
             organizationSlug,
             ownerName: request.auth.user.name ?? "Workspace owner",
             ownerEmail: request.auth.user.email,

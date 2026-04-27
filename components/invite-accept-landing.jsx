@@ -25,7 +25,7 @@ export function InviteAcceptLanding({ searchParams }) {
   }, []);
   const title = type === "organization" ? `Accept invitation to ${inviteName || "this organization"}` : `Accept invitation to ${inviteName || "this workspace"}`;
   const subtitle = type === "organization"
-    ? `Sign in with the invited email address to join ${inviteName || "the organization"}${role ? ` as ${role}` : ""}.`
+    ? `Sign in with the invited email address to join ${inviteName || "the organization"}${role ? ` as ${role}` : ""}. You should land straight into the shared workspace flow after access is confirmed.`
     : `Sign in with the invited email address to join ${inviteName || "the workspace"}${organizationName ? ` in ${organizationName}` : ""}.`;
   const isReady = Boolean(type === "organization" ? organizationSlug : workspaceSlug);
 
@@ -40,7 +40,7 @@ export function InviteAcceptLanding({ searchParams }) {
           <div className="mt-8 rounded-[1.75rem] border border-base-300 bg-base-100 p-6">
             <div className="text-sm font-semibold text-neutral">Continue with Google</div>
             <p className="mt-2 text-sm leading-7 text-base-content/65">
-              Use the same email address that received the invitation so we can match it correctly.
+              Use the same email address that received the invitation so we can match it correctly and get you into the right workspace without extra setup.
             </p>
             <button
               type="button"

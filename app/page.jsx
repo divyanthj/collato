@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { auth, signIn } from "@/auth";
-import logo from "@/app/logo.png";
+import { auth } from "@/auth";
 import appConfig from "@/config/app";
 import { AuthEntryPanel } from "@/components/auth-entry-panel";
+import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { PricingSection } from "@/components/pricing-section";
 
 const pillars = [
@@ -23,6 +23,29 @@ const pillars = [
     title: "Grounded AI",
     body: "Ask questions, generate reports, and surface next steps from project evidence instead of relying on generic guesses.",
   },
+];
+
+const howItWorks = [
+  {
+    step: "01",
+    title: "Create workspace",
+    body: "Start one workspace for the client, project, or initiative you need to organize first."
+  },
+  {
+    step: "02",
+    title: "Add context",
+    body: "Upload the files, notes, and screenshots your team usually keeps scattered across tools."
+  },
+  {
+    step: "03",
+    title: "Capture updates",
+    body: "Turn field notes and team check-ins into structured progress instead of raw fragments."
+  },
+  {
+    step: "04",
+    title: "Generate report",
+    body: "Use the captured evidence to produce a progress-ready summary without starting from scratch."
+  }
 ];
 
 export default async function LandingPage() {
@@ -47,25 +70,23 @@ export default async function LandingPage() {
                 <Link href="#features" className="btn btn-ghost">
                   Features
                 </Link>
+                <Link href="#how-it-works" className="btn btn-ghost">
+                  How it works
+                </Link>
                 <Link href="#pricing" className="btn btn-ghost">
                   Pricing
                 </Link>
                 {session?.user ? (
                   <Link href="/dashboard" className="btn btn-primary">
-                    Open dashboard
+                    Go to dashboard
                   </Link>
                 ) : (
-                  <form
-                    action={async () => {
-                      "use server";
-                      await signIn("google", {
-                        redirectTo: "/dashboard",
-                        prompt: "select_account"
-                      });
-                    }}
-                  >
-                    <button className="btn btn-primary">Continue with Google</button>
-                  </form>
+                  <GoogleSignInButton
+                    className="btn btn-primary"
+                    label="Start your first workspace"
+                    callbackUrl="/dashboard?authSuccess=1"
+                    analyticsSource="landing_header"
+                  />
                 )}
               </div>
             </div>
@@ -74,7 +95,7 @@ export default async function LandingPage() {
               <div className="space-y-8">
                 <div className="brand-card inline-flex max-w-[340px] items-center justify-center p-4">
                   <Image
-                    src={logo}
+                    src="/collato-logo.jpg"
                     alt="Collato.io logo"
                     width={520}
                     height={280}
@@ -91,14 +112,29 @@ export default async function LandingPage() {
                   <p className="max-w-2xl text-lg leading-8 text-base-content/72">
                     {appConfig.brand.heroBody}
                   </p>
+                  <div className="rounded-[1.6rem] border border-primary/15 bg-base-100/85 p-5">
+                    <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Fastest first win</div>
+                    <p className="mt-3 text-base font-medium text-neutral">
+                      Create one workspace, add project context, capture an update, and generate a progress-ready summary.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                  <Link href="/dashboard" className="btn btn-primary btn-lg">
-                    Open dashboard
-                  </Link>
-                  <a href="#features" className="btn btn-outline btn-lg">
-                    Explore the workflow
+                  {session?.user ? (
+                    <Link href="/dashboard" className="btn btn-primary btn-lg">
+                      Go to dashboard
+                    </Link>
+                  ) : (
+                    <GoogleSignInButton
+                      className="btn btn-primary btn-lg"
+                      label="Create your first workspace"
+                      callbackUrl="/dashboard?authSuccess=1"
+                      analyticsSource="landing_hero"
+                    />
+                  )}
+                  <a href="#how-it-works" className="btn btn-outline btn-lg">
+                    See the 4-step flow
                   </a>
                 </div>
               </div>
@@ -108,10 +144,10 @@ export default async function LandingPage() {
                   <div className="rounded-[1.7rem] bg-neutral bg-brand-sheen bg-[length:180%_180%] p-6 text-white animate-shimmer">
                     <div className="text-xs uppercase tracking-[0.24em] text-white/75">Primary outcome</div>
                     <div className="mt-3 text-2xl font-semibold">
-                      Institutional memory that keeps the whole delivery team aligned.
+                      A workspace that turns scattered inputs into a report-ready operating picture.
                     </div>
                     <p className="mt-3 max-w-md text-sm leading-7 text-white/80">
-                      Capture project evidence once, then reuse it for questions, handoffs, reports, and follow-up.
+                      Capture project evidence once, then reuse it for answers, handoffs, follow-ups, and client-facing summaries.
                     </p>
                   </div>
 
@@ -119,13 +155,13 @@ export default async function LandingPage() {
                     <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4">
                       <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Built for</div>
                       <p className="mt-2 text-sm leading-7 text-base-content/72">
-                        Teams managing client work, site updates, project documents, and the small details that are easy to lose.
+                        Teams managing client work, site visits, project documents, and all the small details that usually get lost between updates.
                       </p>
                     </div>
                     <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4">
-                      <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Works like</div>
+                      <div className="text-xs uppercase tracking-[0.24em] text-primary/60">First-run promise</div>
                       <p className="mt-2 text-sm leading-7 text-base-content/72">
-                        A clean DaisyUI workspace layer with knowledge capture, update structuring, task tracking, and grounded chat.
+                        Start with one workspace and one clear path: context in, updates captured, report out.
                       </p>
                     </div>
                   </div>
@@ -153,6 +189,30 @@ export default async function LandingPage() {
                 <div className="brand-orb h-12 w-12 rounded-2xl opacity-90" />
                 <h3 className="font-display mt-5 text-2xl font-semibold text-neutral">{pillar.title}</h3>
                 <p className="mt-3 text-sm leading-7 text-base-content/70">{pillar.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="how-it-works" className="mx-auto max-w-7xl px-6 pb-14 lg:px-10">
+        <div className="glass-panel rounded-[2rem] p-8">
+          <div className="max-w-3xl">
+            <p className="section-kicker">How it works</p>
+            <h2 className="font-display mt-2 text-4xl font-semibold text-neutral">
+              A simple four-step path to your first usable project summary.
+            </h2>
+            <p className="mt-4 text-sm leading-7 text-base-content/70">
+              Collato works best when the first session feels guided instead of open-ended. Start small, then expand once the team sees value.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-4 lg:grid-cols-4">
+            {howItWorks.map((item) => (
+              <div key={item.step} className="rounded-[1.6rem] border border-base-300 bg-base-100 p-6">
+                <div className="text-xs uppercase tracking-[0.28em] text-primary/60">{item.step}</div>
+                <h3 className="font-display mt-4 text-2xl font-semibold text-neutral">{item.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-base-content/70">{item.body}</p>
               </div>
             ))}
           </div>

@@ -1,7 +1,8 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
+import { trackDatafastGoal } from "@/lib/client-analytics";
 import { VoiceInputButton } from "@/components/voice-input-button";
 function ReportSection({ title, items, emptyLabel }) {
     return (<div className="rounded-[1.5rem] bg-base-100 p-5">
@@ -20,6 +21,7 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
     const [error, setError] = useState(null);
     const [statusMessage, setStatusMessage] = useState(null);
     const [isPending, startTransition] = useTransition();
+    const hasTrackedFirstReportRef = useRef(false);
     const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? templates[0];
     const handleOpenHtml = () => {
         if (!report?.html) {
@@ -70,6 +72,17 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
                 }
                 setMissingQuestions([]);
                 setReport(result);
+                trackDatafastGoal("report_generated", {
+                    workspace_slug: workspace.slug,
+                    template_id: selectedTemplateId
+                });
+                if (!hasTrackedFirstReportRef.current) {
+                    hasTrackedFirstReportRef.current = true;
+                    trackDatafastGoal("first_report_generated", {
+                        workspace_slug: workspace.slug,
+                        template_id: selectedTemplateId
+                    });
+                }
                 setStatusMessage(`Report created using the ${selectedTemplate?.name ?? "selected"} format.`);
             }
             catch (reportError) {
@@ -209,6 +222,9 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
             <p className="mt-3 max-w-3xl text-sm leading-7 text-base-content/70">
               Choose a report template first, then generate a report from the workspace knowledge, captured updates, and tracked action items.
             </p>
+            <div className="mt-4 rounded-[1.25rem] border border-base-300 bg-base-100 p-4 text-sm leading-6 text-base-content/68">
+              <span className="font-medium text-neutral">Use this when:</span> the workspace already has some knowledge or updates and you want to compile them into a clean progress summary.
+            </div>
           </div>
           <div className="rounded-full border border-base-300 bg-base-100 px-4 py-2 text-sm font-medium text-base-content/70">
             {workspace.fileCount} files / {workspace.updateCount} updates / {workspace.taskCount} tasks
@@ -288,6 +304,10 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
                 {isPending ? "Generating..." : "Generate with answers"}
               </button>
             </div>
+          </div>) : null}
+
+        {!report && missingQuestions.length === 0 && workspace.fileCount === 0 && workspace.updateCount === 0 ? (<div className="mt-6 rounded-[1.5rem] border border-dashed border-base-300 bg-base-100 p-6 text-sm leading-7 text-base-content/65">
+            Add a little context first, ideally in Knowledge or Updates, then return here to generate a stronger report.
           </div>) : null}
       </div>
 

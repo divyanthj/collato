@@ -1,14 +1,14 @@
 const appConfig = {
   appName: "Collato.io",
   appDescription:
-    "Turn messy workflows into clear, structured reports with shared workspaces for project knowledge, updates, tasks, and grounded AI answers.",
+    "Create a workspace, capture project context and updates, then turn them into clear progress-ready reports with grounded AI help.",
   domainName: "collato.io",
   brand: {
-    tagline: "Turn messy workflows into clear, structured reports.",
-    heroKicker: "Turn messy workflows into clear, structured reports.",
-    heroHeadline: "Turn scattered project signals into one shared operating memory.",
+    tagline: "Create a workspace and turn raw project signals into a clear progress summary.",
+    heroKicker: "Create a workspace and turn raw project signals into a clear progress summary.",
+    heroHeadline: "Turn scattered project signals into one shared operating memory and a report-ready summary.",
     heroBody:
-      "Collato.io brings files, field updates, team decisions, and AI answers into the same workspace so the whole project team can move from context switching to coordinated execution and turn messy workflows into clear, structured reports.",
+      "Collato.io brings files, field updates, team decisions, and grounded AI answers into one workspace so your team can move from scattered inputs to a usable progress summary without rebuilding context each time.",
   },
   resend: {
     fromNoReply: "Collato.io <hello@resend.collato.io>",

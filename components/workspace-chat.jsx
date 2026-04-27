@@ -161,6 +161,9 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
       <p className="mt-3 max-w-2xl text-sm leading-7 text-base-content/70">
         Ask questions across uploaded files and team updates. Answers now stream in like a real chat instead of waiting for the full response first.
       </p>
+      <div className="mt-4 rounded-[1.25rem] border border-base-300 bg-base-100 p-4 text-sm leading-6 text-base-content/68">
+        <span className="font-medium text-neutral">Use this when:</span> the workspace already contains knowledge or updates and you want answers over that saved context instead of adding new information.
+      </div>
 
       <div className="mt-6">
         <label className="form-control">
@@ -219,7 +222,7 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
                     </div>) : null}
                 </div>
               </div>))) : (<div className="rounded-[1.25rem] border border-dashed border-base-300 bg-base-100 p-8 text-center text-sm leading-7 text-base-content/60">
-              Start a conversation with the workspace knowledge base.
+              Start a conversation with the workspace knowledge base. If answers feel thin, add more context in Knowledge or Updates first.
             </div>)}
           <div ref={scrollRef}/>
         </div>

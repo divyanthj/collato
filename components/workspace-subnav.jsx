@@ -18,7 +18,7 @@ const WORKSPACE_TABS = [
   },
   {
     id: "chat",
-    label: "Ask",
+    label: "Ask workspace",
     href: (workspaceSlug) => `/dashboard/${workspaceSlug}/chat`
   },
   {
@@ -39,8 +39,8 @@ export function WorkspaceSubnav({ workspaceSlug, activeTab }) {
   }
 
   return (
-    <div className="mt-5">
-      <div role="tablist" className="tabs tabs-boxed rounded-[1rem] border border-base-300 bg-base-100/90 p-1">
+    <div className="mt-5 max-w-full overflow-x-auto pb-1">
+      <div role="tablist" className="tabs tabs-boxed w-max rounded-[1rem] border border-base-300 bg-base-100/90 p-1">
         {WORKSPACE_TABS.map((tab) => {
           const isActive = tab.id === activeTab;
           return (
@@ -49,7 +49,7 @@ export function WorkspaceSubnav({ workspaceSlug, activeTab }) {
               href={tab.href(workspaceSlug)}
               role="tab"
               aria-selected={isActive}
-              className={`tab rounded-xl border border-transparent transition ${
+              className={`tab flex-none whitespace-nowrap rounded-xl border border-transparent px-3 text-xs transition sm:text-sm ${
                 isActive
                   ? "tab-active !border-neutral !bg-neutral !text-neutral-content"
                   : "text-base-content/72 hover:border-base-300 hover:bg-base-200/70 hover:text-neutral"

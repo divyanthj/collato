@@ -2,6 +2,7 @@ import { Manrope, Space_Grotesk } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import appConfig from "@/config/app";
+import { SiteNav } from "@/components/site-nav";
 
 const bodyFont = Manrope({
   subsets: ["latin"],
@@ -26,6 +27,7 @@ export default function RootLayout({ children }) {
       className={`${bodyFont.variable} ${displayFont.variable}`}
     >
       <body>
+        <SiteNav />
         {children}
         <Script id="datafast-queue" strategy="beforeInteractive">
           {`

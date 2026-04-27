@@ -174,6 +174,12 @@ export function KnowledgeBaseManager({
                             file_type: result.file.fileType || selectedFile.type || "unknown",
                             input_method: "file_upload"
                         });
+                        if (relevantFiles.length === 0 && !knowledgeBody.trim()) {
+                            trackDatafastGoal("first_knowledge_item_added", {
+                                workspace_slug: selectedWorkspace.slug,
+                                source: "file_upload"
+                            });
+                        }
                     }
                     latestSummary = result.knowledgeSummary ?? latestSummary;
                 }
@@ -181,6 +187,12 @@ export function KnowledgeBaseManager({
                     const noteResult = await saveKnowledgeNote();
                     if (noteResult?.file) {
                         savedEntries.push(noteResult.file);
+                    }
+                    if (relevantFiles.length === 0) {
+                        trackDatafastGoal("first_knowledge_item_added", {
+                            workspace_slug: selectedWorkspace.slug,
+                            source: isVoiceUsed ? "voice_note" : "typed_note"
+                        });
                     }
                     latestSummary = noteResult?.knowledgeSummary ?? latestSummary;
                 }
@@ -325,6 +337,9 @@ export function KnowledgeBaseManager({
         <p className="mt-3 max-w-xl text-sm leading-7 text-base-content/70">
           Use this area for durable reference material your team will revisit. For day-by-day progress logs and check-ins, use Updates.
         </p>
+        <div className="mt-4 rounded-[1.25rem] border border-base-300 bg-base-100 p-4 text-sm leading-6 text-base-content/68">
+          <span className="font-medium text-neutral">Use this when:</span> you are saving documents, screenshots, notes, transcripts, or facts that should remain searchable and reusable later.
+        </div>
 
         <div className="mt-6 grid gap-3">
           <label className="form-control">
@@ -549,7 +564,7 @@ export function KnowledgeBaseManager({
                   </div> : null}
                 <p className="mt-3 line-clamp-4 text-sm leading-6 text-base-content/75">{file.extractedText || file.manualNotes || file.knowledgeText || "No searchable text captured for this file yet."}</p>
               </div>))) : (<div className="rounded-[1.5rem] border border-dashed border-base-300 bg-base-100 p-8 text-center text-sm leading-7 text-base-content/60">
-              No matching knowledge files yet. Add the first file or adjust your search.
+              No matching knowledge files yet. Start by adding one file or note so the workspace has reusable context.
             </div>)}
         </div>
       </div>

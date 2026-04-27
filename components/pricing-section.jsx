@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertBanner } from "@/components/alert-banner";
+import { trackDatafastGoal } from "@/lib/client-analytics";
 
 export function PricingSection({ pricing, isAuthenticated }) {
-  const [quantity, setQuantity] = useState(5);
+  const [quantity, setQuantity] = useState(3);
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [checkoutError, setCheckoutError] = useState(null);
   const plans = pricing.plans ?? [];
@@ -22,6 +23,11 @@ export function PricingSection({ pricing, isAuthenticated }) {
   const handleCheckout = async (plan) => {
     setCheckoutError(null);
     setLoadingPlan(plan.key);
+    trackDatafastGoal("checkout_started", {
+      source: "marketing_pricing",
+      interval: plan.interval,
+      quantity: validatedQuantity
+    });
 
     try {
       const response = await fetch("/api/billing/checkout", {
@@ -55,10 +61,10 @@ export function PricingSection({ pricing, isAuthenticated }) {
           <div className="max-w-3xl">
             <p className="section-kicker">Pricing</p>
             <h2 className="font-display mt-2 text-4xl font-semibold text-neutral">
-              Simple pricing for your whole team.
+              Start small, then expand once the workflow proves itself.
             </h2>
             <p className="mt-4 text-sm leading-7 text-base-content/70">
-              Choose monthly or annual billing, then enter how many members you plan to invite.
+              Pick a plan, start with a small seat count, and adjust later as more teammates join the workspace.
             </p>
           </div>
 
@@ -77,7 +83,7 @@ export function PricingSection({ pricing, isAuthenticated }) {
               />
             </label>
             <div className="mt-2 text-xs text-base-content/60">
-              You are charged per member seat.
+              You are charged per member seat. Most teams can start with a small setup and expand later.
             </div>
           </div>
         </div>
@@ -135,11 +141,11 @@ export function PricingSection({ pricing, isAuthenticated }) {
                       onClick={() => void handleCheckout(plan)}
                       disabled={loadingPlan === plan.key}
                     >
-                      {loadingPlan === plan.key ? "Redirecting..." : "Try Collato"}
+                      {loadingPlan === plan.key ? "Redirecting..." : "Start workspace setup"}
                     </button>
                   ) : (
                     <Link href="/dashboard" className={`btn ${isAnnual ? "btn-primary" : "btn-outline"} flex-1`}>
-                      Try Collato
+                      Start workspace setup
                     </Link>
                   )}
                 </div>

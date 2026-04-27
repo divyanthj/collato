@@ -19,14 +19,13 @@ export function WorkspaceUpdateIntake({
     workspaces,
     initialUpdates,
     initialActivityEvents = [],
-    initialNotificationPreferences = {},
     isAuthenticated,
     currentUserName,
     currentUserEmail,
     canManageAiPrivacy = false
 }) {
     const voiceButtonRef = useRef(null);
-    const [selectedWorkspaceSlug, setSelectedWorkspaceSlug] = useState(workspaces[0]?.slug ?? "");
+    const [selectedWorkspaceSlug] = useState(workspaces[0]?.slug ?? "");
     const [body, setBody] = useState("");
     const [audioData, setAudioData] = useState(null);
     const [isVoiceUsed, setIsVoiceUsed] = useState(false);
@@ -38,16 +37,14 @@ export function WorkspaceUpdateIntake({
     const [analysis, setAnalysis] = useState(null);
     const [error, setError] = useState(null);
     const [statusMessage, setStatusMessage] = useState(null);
+    const [isCaptureDialogOpen, setIsCaptureDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [memberFilter, setMemberFilter] = useState("all");
     const [actionStateFilter, setActionStateFilter] = useState("active");
     const [actionStatusSavingKey, setActionStatusSavingKey] = useState(null);
     const [privacySavingUpdateId, setPrivacySavingUpdateId] = useState(null);
-    const [notificationPreferences, setNotificationPreferences] = useState(initialNotificationPreferences);
-    const [notificationPreferenceSaving, setNotificationPreferenceSaving] = useState(false);
     const [isSubmitting, startSubmitting] = useTransition();
     const selectedWorkspace = useMemo(() => workspaces.find((workspace) => workspace.slug === selectedWorkspaceSlug) ?? workspaces[0], [selectedWorkspaceSlug, workspaces]);
-    const selectedNotificationPreference = notificationPreferences[selectedWorkspace?.slug ?? ""] ?? "immediate";
     const filteredUpdates = useMemo(() => {
         const normalizedQuery = searchQuery.trim().toLowerCase();
         return savedUpdates.filter((update) => {
@@ -138,46 +135,7 @@ export function WorkspaceUpdateIntake({
         event.preventDefault();
         setSupportFiles((current) => [...current, imageFile]);
         setError(null);
-        setStatusMessage(`Screenshot pasted: ${imageFile.name}. It will upload as a supporting file.`);
-    };
-    const handleNotificationPreferenceChange = async (nextPreference) => {
-        if (!selectedWorkspace) {
-            return;
-        }
-        setError(null);
-        setNotificationPreferenceSaving(true);
-        const previousPreference = notificationPreferences[selectedWorkspace.slug] ?? "immediate";
-        setNotificationPreferences((current) => ({
-            ...current,
-            [selectedWorkspace.slug]: nextPreference
-        }));
-        try {
-            const response = await fetch("/api/workspace-members", {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    workspaceSlug: selectedWorkspace.slug,
-                    notificationPreference: nextPreference
-                })
-            });
-            const result = await readResponsePayload(response);
-            if (!response.ok) {
-                throw new Error(result.error ?? "Could not update email notifications");
-            }
-            setStatusMessage("Email notification preference updated.");
-        }
-        catch (preferenceError) {
-            setNotificationPreferences((current) => ({
-                ...current,
-                [selectedWorkspace.slug]: previousPreference
-            }));
-            setError(preferenceError instanceof Error ? preferenceError.message : "Could not update email notifications");
-        }
-        finally {
-            setNotificationPreferenceSaving(false);
-        }
+        setStatusMessage(`Screenshot pasted: ${imageFile.name}. It will upload as a file.`);
     };
     const uploadSupportingFiles = async ({ workspaceSlug, files, manualNotes }) => {
         const uploaded = await Promise.all(files.map(async (file) => {
@@ -241,8 +199,8 @@ export function WorkspaceUpdateIntake({
             try {
                 if (hasSupportingFiles) {
                     const supportNotes = hasUpdateText
-                        ? `Supporting file uploaded with update context: ${trimmedBody.slice(0, 1000)}`
-                        : "Supporting file uploaded from the Team Updates capture flow.";
+                        ? `File uploaded with update context: ${trimmedBody.slice(0, 1000)}`
+                        : "File uploaded from the Team Updates capture flow.";
                     await uploadSupportingFiles({
                         workspaceSlug: selectedWorkspace.slug,
                         files: supportFiles,
@@ -294,6 +252,12 @@ export function WorkspaceUpdateIntake({
                         input_method: isVoiceUsed ? "voice" : "typed",
                         channel: DEFAULT_UPDATE_CHANNEL
                     });
+                    if (savedUpdates.length === 0) {
+                        trackDatafastGoal("first_update_added", {
+                            workspace_slug: selectedWorkspace.slug,
+                            input_method: isVoiceUsed ? "voice" : "typed"
+                        });
+                    }
                     setSavedUpdates((current) => [result, ...current].slice(0, 8));
                     setSavedActivityEvents((current) => [{
                             id: `update-${result.id}`,
@@ -315,11 +279,12 @@ export function WorkspaceUpdateIntake({
                 setSupportFiles([]);
                 setSupportFileInputKey((current) => current + 1);
                 setStatusMessage(hasUpdateText && hasSupportingFiles
-                    ? "Update submitted and supporting files uploaded."
+                    ? "Update submitted and files uploaded."
                     : hasUpdateText
                         ? "Update submitted and saved to the workspace."
-                        : "Supporting files uploaded to the workspace knowledge base.");
+                        : "Files uploaded to the workspace knowledge base.");
                 setIsVoiceUsed(false);
+                setIsCaptureDialogOpen(false);
             }
             catch (submitError) {
                 setError(submitError instanceof Error ? submitError.message : "Could not submit update");
@@ -423,114 +388,41 @@ export function WorkspaceUpdateIntake({
             setPrivacySavingUpdateId(null);
         }
     };
-    return (<div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-      <div className="glass-panel rounded-[2rem] p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+    return (<div className="space-y-5 sm:space-y-6">
+      <div className="glass-panel rounded-[1.6rem] p-5 sm:rounded-[2rem] sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <p className="section-kicker">Team updates</p>
-            <h2 className="mt-2 text-3xl font-semibold text-neutral">Capture an update</h2>
+            <h2 className="mt-2 text-2xl font-semibold text-neutral sm:text-3xl">Updates</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-base-content/70">
+              Capture typed notes, voice notes, screenshots, and files from this workspace in one clean flow.
+            </p>
           </div>
-          <div className={`badge badge-lg ${isAuthenticated ? "badge-success" : "badge-warning"}`}>
-            {isAuthenticated ? "Available" : "Sign in to continue"}
+          <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+            <div className={`badge ${isAuthenticated ? "badge-success" : "badge-warning"}`}>
+              {isAuthenticated ? "Available" : "Sign in to continue"}
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setError(null);
+                setStatusMessage(null);
+                setIsCaptureDialogOpen(true);
+              }}
+              disabled={!isAuthenticated || !selectedWorkspace}
+            >
+              Capture update
+            </button>
           </div>
-        </div>
-
-        <p className="mt-3 max-w-xl text-sm leading-7 text-base-content/70">
-          Members can type updates or speak them. The transcript is structured into a clean summary and then saved back into the same workspace knowledge base.
-        </p>
-
-        <div className="mt-6 grid gap-3">
-          <label className="form-control">
-            <div className="label">
-              <span className="label-text">Workspace</span>
-            </div>
-            <select className="select select-bordered" value={selectedWorkspaceSlug} onChange={(event) => setSelectedWorkspaceSlug(event.target.value)} disabled={!isAuthenticated || workspaces.length === 0}>
-              {workspaces.length === 0 ? <option>No workspaces yet</option> : null}
-              {workspaces.map((workspace) => (<option key={workspace.slug} value={workspace.slug}>
-                  {workspace.name}
-                </option>))}
-            </select>
-          </label>
-
-          <div className="rounded-[1.25rem] border border-base-300 bg-base-100 p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-neutral">Update email notifications</div>
-                <p className="mt-1 text-sm leading-6 text-base-content/65">
-                  Choose whether you get update emails right away, in a daily digest, both, or not at all for this workspace.
-                </p>
-              </div>
-              <label className="form-control w-full sm:max-w-[220px]">
-                <select
-                  className="select select-bordered select-sm"
-                  value={selectedNotificationPreference}
-                  onChange={(event) => {
-                    void handleNotificationPreferenceChange(event.target.value);
-                  }}
-                  disabled={!isAuthenticated || !selectedWorkspace || notificationPreferenceSaving}
-                >
-                  <option value="immediate">Immediate only</option>
-                  <option value="digest">Daily digest only</option>
-                  <option value="both">Immediate + digest</option>
-                  <option value="off">Off</option>
-                </select>
-              </label>
-            </div>
-          </div>
-
-          <label className="form-control">
-            <div className="label flex-wrap items-start">
-              <div>
-                <span className="label-text">Raw update</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <VoiceInputButton ref={voiceButtonRef} onTranscript={(text) => {
-            setBody((current) => `${current}${current ? " " : ""}${text}`.trim());
-            setIsVoiceUsed(true);
-        }} onAudioData={setAudioData} onRecordingChange={setIsRecording}/>
-                <span className="text-xs uppercase tracking-[0.2em] text-base-content/50">Mic input</span>
-              </div>
-            </div>
-            <textarea className="textarea textarea-bordered h-40" value={body} onChange={(event) => setBody(event.target.value)} onPaste={handlePasteSupportingScreenshot} disabled={!isAuthenticated} placeholder="Example: Visited the site today. The team confirmed the revised schedule, shared the facade markups, and asked for the requirement checklist before Friday."/>
-          </label>
-
-          <label className="form-control">
-            <div className="label">
-              <span className="label-text">Supporting files (optional)</span>
-            </div>
-            <input key={supportFileInputKey} type="file" className="file-input file-input-bordered" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.doc,.docx,.txt,.csv,.xlsx" onChange={(event) => handleSupportFilesChange(event.target.files)} disabled={!isAuthenticated}/>
-            <div className="mt-2 text-xs text-base-content/60">
-              Allowed: images, PDF, DOC/DOCX, TXT, CSV, XLSX.
-            </div>
-            <div className="mt-1 text-xs text-base-content/60">
-              Tip: paste a screenshot with Ctrl+V while focused in Raw update.
-            </div>
-            {supportFiles.length > 0 ? (<div className="mt-2 text-xs text-base-content/70">
-                {supportFiles.length} file{supportFiles.length === 1 ? "" : "s"} selected: {supportFiles.map((file) => file.name).join(", ")}
-              </div>) : null}
-          </label>
-
-          {isRecording ? (<div className="rounded-[1.25rem] border border-primary/20 bg-base-100 p-4">
-              <div className="text-sm font-medium text-neutral">Recording live</div>
-              <WaveformCanvas audioData={audioData} className="mt-3 h-20 w-full"/>
-            </div>) : null}
-        </div>
-
-        {error ? <AlertBanner tone="error" className="mt-4">{error}</AlertBanner> : null}
-
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <button type="button" className="btn btn-primary" onClick={handleSubmit} disabled={!isAuthenticated || isSubmitting || !selectedWorkspace || (!body.trim() && supportFiles.length === 0)}>
-            {isSubmitting ? "Submitting..." : "Submit"}
-          </button>
-          <p className="text-sm leading-7 text-base-content/60">Submit an update, supporting files, or both. Uploaded files are saved into the same workspace knowledge base.</p>
         </div>
       </div>
 
-      <div className="glass-panel rounded-[2rem] p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+      <div className="glass-panel rounded-[1.6rem] p-5 sm:rounded-[2rem] sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <p className="section-kicker">Latest result</p>
-            <h3 className="mt-2 text-3xl font-semibold text-neutral">What was saved to knowledge</h3>
+            <h3 className="mt-2 text-2xl font-semibold leading-tight text-neutral sm:text-3xl">What was saved to knowledge</h3>
           </div>
         </div>
 
@@ -569,17 +461,17 @@ export function WorkspaceUpdateIntake({
               <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Knowledge contribution</div>
               <p className="mt-3 text-sm leading-7 text-base-content/75">{analysis.structured.knowledgeContribution}</p>
             </div>
-          </div>) : (<div className="mt-6 rounded-[1.5rem] border border-dashed border-base-300 bg-base-100 p-8 text-center text-sm leading-7 text-base-content/60">
-            Submit an update to see the structured version that gets saved into the workspace knowledge base.
+          </div>) : (<div className="mt-6 rounded-[1.5rem] border border-dashed border-base-300 bg-base-100 p-6 text-center text-sm leading-7 text-base-content/60 sm:p-8">
+            Submit an update to see the structured version that gets saved into the workspace. This is the fastest way to turn raw field notes into a cleaner project signal.
           </div>)}
 
         <div className="mt-8">
-          <div className="flex items-center justify-between gap-3">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <p className="section-kicker">Recent updates</p>
-              <h3 className="mt-2 text-2xl font-semibold text-neutral">Team activity stream</h3>
+              <h3 className="mt-2 text-2xl font-semibold leading-tight text-neutral">Team activity stream</h3>
             </div>
-            <div className="badge badge-outline">{filteredUpdateEvents.length} updates</div>
+            <div className="badge badge-outline self-start sm:self-center">{filteredUpdateEvents.length} updates</div>
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -750,11 +642,98 @@ export function WorkspaceUpdateIntake({
                       </div>
                     </div>
                   </div>))) : (<div className="rounded-[1.5rem] border border-dashed border-base-300 bg-base-100 p-8 text-center text-sm leading-7 text-base-content/60">
-                No matching updates yet. Save the first member update or adjust your filters.
+                No matching updates yet. Save the first update to build a chronological activity trail for this workspace.
               </div>)}
           </div>
         </div>
       </div>
+
+      {isCaptureDialogOpen ? (
+        <div className="modal modal-open" role="dialog" aria-modal="true" aria-labelledby="capture-update-dialog-title">
+          <div className="modal-box relative max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-4xl overflow-y-auto rounded-[1.5rem] bg-base-100 p-0 shadow-soft sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:rounded-[2rem]">
+            <button
+              type="button"
+              className="btn btn-circle btn-ghost btn-sm absolute right-3 top-3 z-20 sm:right-4 sm:top-4"
+              aria-label="Close capture update dialog"
+              onClick={() => {
+                setError(null);
+                setIsCaptureDialogOpen(false);
+              }}
+            >
+              X
+            </button>
+
+            <div className="border-b border-base-300 bg-base-100/90 px-5 py-5 pr-14 backdrop-blur-xl sm:px-6 sm:pr-16">
+              <p className="section-kicker">Capture update</p>
+              <h2 id="capture-update-dialog-title" className="mt-2 text-2xl font-semibold leading-tight text-neutral sm:text-3xl">
+                Add a workspace update
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-base-content/70">
+                Use this when you are logging progress, site notes, team observations, WhatsApp screenshots, or anything that happened recently.
+              </p>
+            </div>
+
+            <div className="grid gap-4 p-5 sm:p-6">
+              <label className="form-control">
+                <div className="label flex-wrap items-start">
+                  <div>
+                    <span className="label-text">Raw update</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <VoiceInputButton ref={voiceButtonRef} onTranscript={(text) => {
+            setBody((current) => `${current}${current ? " " : ""}${text}`.trim());
+            setIsVoiceUsed(true);
+        }} onAudioData={setAudioData} onRecordingChange={setIsRecording}/>
+                    <span className="text-xs uppercase tracking-[0.2em] text-base-content/50">Mic input</span>
+                  </div>
+                </div>
+                <textarea className="textarea textarea-bordered h-36 sm:h-44" value={body} onChange={(event) => setBody(event.target.value)} onPaste={handlePasteSupportingScreenshot} disabled={!isAuthenticated} placeholder="Example: Visited the site today. The team confirmed the revised schedule, shared the facade markups, and asked for the requirement checklist before Friday."/>
+              </label>
+
+              <label className="form-control">
+                <div className="label">
+                  <span className="label-text">Files (optional)</span>
+                </div>
+                <input key={supportFileInputKey} type="file" className="file-input file-input-bordered" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.doc,.docx,.txt,.csv,.xlsx" onChange={(event) => handleSupportFilesChange(event.target.files)} disabled={!isAuthenticated}/>
+                <div className="mt-2 text-xs text-base-content/60">
+                  Allowed: images, PDF, DOC/DOCX, TXT, CSV, XLSX.
+                </div>
+                <div className="mt-1 text-xs text-base-content/60">
+                  Tip: paste a screenshot with Ctrl+V while focused in Raw update.
+                </div>
+                {supportFiles.length > 0 ? (<div className="mt-2 text-xs text-base-content/70">
+                    {supportFiles.length} file{supportFiles.length === 1 ? "" : "s"} selected: {supportFiles.map((file) => file.name).join(", ")}
+                  </div>) : null}
+              </label>
+
+              {isRecording ? (<div className="rounded-[1.25rem] border border-primary/20 bg-base-100 p-4">
+                  <div className="text-sm font-medium text-neutral">Recording live</div>
+                  <WaveformCanvas audioData={audioData} className="mt-3 h-20 w-full"/>
+                </div>) : null}
+
+              {error ? <AlertBanner tone="error">{error}</AlertBanner> : null}
+
+              <div className="flex flex-col gap-3 border-t border-base-300 pt-4 sm:flex-row sm:flex-wrap sm:items-center">
+                <button type="button" className="btn btn-primary" onClick={handleSubmit} disabled={!isAuthenticated || isSubmitting || !selectedWorkspace || (!body.trim() && supportFiles.length === 0)}>
+                  {isSubmitting ? "Submitting..." : "Submit"}
+                </button>
+                <p className="text-sm leading-7 text-base-content/60">Submit an update, files, or both. Uploaded files are saved into the same workspace knowledge base.</p>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="modal-backdrop"
+            aria-label="Close capture update dialog"
+            onClick={() => {
+              setError(null);
+              setIsCaptureDialogOpen(false);
+            }}
+          >
+            close
+          </button>
+        </div>
+      ) : null}
     </div>);
 }
 

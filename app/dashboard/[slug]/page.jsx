@@ -38,12 +38,14 @@ export default async function WorkspaceDetailPage({ params, searchParams }) {
     const data = resolution.data;
     const { organization, workspace, files, updates, tasks, overview, permissions } = data;
     const inviteAccepted = readSearchParam(searchParams?.inviteAccepted) === "1";
+    const workspaceCreated = readSearchParam(searchParams?.created) === "1";
+    const isFirstRun = files.length === 0 && updates.length === 0 && tasks.length === 0;
     return (<main className="min-h-screen">
       <section className="mx-auto max-w-7xl px-6 pb-8 pt-8 lg:px-10">
         <div className="glass-panel rounded-[2.1rem] p-8 shadow-soft">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="section-kicker">Workspace hub</p>
+              <p className="section-kicker">{isFirstRun ? "Guided workspace setup" : "Workspace hub"}</p>
               <h1 className="mt-2 text-4xl font-semibold text-neutral lg:text-5xl">{workspace.name}</h1>
               <p className="mt-4 max-w-3xl text-base leading-8 text-base-content/72">{workspace.description}</p>
             </div>
@@ -87,6 +89,7 @@ export default async function WorkspaceDetailPage({ params, searchParams }) {
             </div>
           </div>
           {inviteAccepted ? <AlertBanner tone="success" className="mt-6">Invitation accepted. You now have access to this workspace.</AlertBanner> : null}
+          {workspaceCreated ? <AlertBanner tone="success" className="mt-6">Workspace created. Start with the guided steps below to add context and generate your first progress-ready summary.</AlertBanner> : null}
         </div>
       </section>
 
@@ -94,105 +97,189 @@ export default async function WorkspaceDetailPage({ params, searchParams }) {
         <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="space-y-6">
             <div className="glass-panel rounded-[2rem] p-7">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="section-kicker">Workspace actions</p>
-                  <h2 className="mt-2 text-3xl font-semibold text-neutral">Go to a focused view</h2>
-                  <p className="mt-3 max-w-2xl text-sm leading-7 text-base-content/68">
-                    Each workspace function lives on its own screen. Use this hub to decide whether you want to manage source material, capture what the team is seeing, ask questions, or turn suggested next steps into tracked work.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-                <Link href={`/dashboard/${workspace.slug}/knowledge`} className="group rounded-[1.9rem] border border-base-300 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,237,225,0.88))] p-6 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-soft">
-                  <div className="flex items-start justify-between gap-4">
+              {isFirstRun ? (<>
+                  <div className="flex items-center justify-between gap-4">
                     <div>
-                      <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Knowledge</div>
-                      <div className="mt-3 text-2xl font-semibold text-neutral">Source material and indexed context</div>
+                      <p className="section-kicker">Start here</p>
+                      <h2 className="mt-2 text-3xl font-semibold text-neutral">Follow one clear path to first value</h2>
+                      <p className="mt-3 max-w-2xl text-sm leading-7 text-base-content/68">
+                        You do not need to learn every section yet. Add reference context first, capture one update, then generate a report-ready summary.
+                      </p>
                     </div>
-                    <span className="rounded-full border border-primary/20 px-3 py-1 text-xs uppercase tracking-[0.18em] text-primary/70">
-                      {files.length} files
-                    </span>
                   </div>
-                  <p className="mt-4 max-w-xl text-sm leading-7 text-base-content/72">
-                    Add files, notes, and extracted project context so the workspace has a durable source of truth before the team starts asking questions about it.
-                  </p>
-                  <div className="mt-6 text-sm font-medium text-primary transition group-hover:translate-x-1">Open knowledge view</div>
-                </Link>
 
-                <div className="grid gap-4">
-                  <Link href={`/dashboard/${workspace.slug}/updates`} className="group rounded-[1.75rem] border border-base-300 bg-base-100 p-5 transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-base-200/50">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Updates</div>
-                        <div className="mt-2 text-xl font-semibold text-neutral">Capture what the team is seeing</div>
+                  <div className="mt-6 grid gap-4 md:grid-cols-3">
+                    {[
+                        {
+                            step: "Step 1 of 3",
+                            title: "Add knowledge",
+                            detail: files.length > 0 ? `${files.length} items added` : "Upload files, notes, or screenshots",
+                            complete: files.length > 0
+                        },
+                        {
+                            step: "Step 2 of 3",
+                            title: "Capture an update",
+                            detail: updates.length > 0 ? `${updates.length} updates saved` : "Record one typed or voice update",
+                            complete: updates.length > 0
+                        },
+                        {
+                            step: "Step 3 of 3",
+                            title: "Generate report",
+                            detail: "Use the captured context to create a progress summary",
+                            complete: false
+                        }
+                    ].map((item) => (<div key={item.title} className={`rounded-[1.5rem] border p-5 ${item.complete ? "border-success/30 bg-success/10" : "border-base-300 bg-base-100"}`}>
+                          <div className="text-xs uppercase tracking-[0.2em] text-primary/60">{item.step}</div>
+                          <div className="mt-3 text-xl font-semibold text-neutral">{item.title}</div>
+                          <div className="mt-2 text-sm leading-6 text-base-content/70">{item.detail}</div>
+                        </div>))}
+                  </div>
+
+                  <div className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+                    <Link href={`/dashboard/${workspace.slug}/knowledge`} className="group rounded-[1.9rem] border border-primary/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(236,246,255,0.94))] p-6 transition hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-soft">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Primary next step</div>
+                          <div className="mt-3 text-2xl font-semibold text-neutral">Add context in Knowledge</div>
+                        </div>
+                        <span className="rounded-full border border-primary/20 px-3 py-1 text-xs uppercase tracking-[0.18em] text-primary/70">
+                          {files.length} files
+                        </span>
                       </div>
-                      <span className="badge badge-outline">{updates.length}</span>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-base-content/70">
-                      Record typed or voice updates, keep the verbatim record, and store the structured version alongside it.
-                    </p>
-                  </Link>
+                      <p className="mt-4 max-w-xl text-sm leading-7 text-base-content/72">
+                        Use Knowledge for long-lived reference material: documents, notes, screenshots, transcripts, and facts your team will reuse later.
+                      </p>
+                      <div className="mt-6 text-sm font-medium text-primary transition group-hover:translate-x-1">Open Knowledge</div>
+                    </Link>
 
-                  <Link href={`/dashboard/${workspace.slug}/chat`} className="group rounded-[1.75rem] border border-base-300 bg-base-100 p-5 transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-base-200/50">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Ask workspace</div>
-                        <div className="mt-2 text-xl font-semibold text-neutral">Query the workspace like a chatbot</div>
+                    <div className="grid gap-4">
+                      <Link href={`/dashboard/${workspace.slug}/updates`} className="group rounded-[1.75rem] border border-base-300 bg-base-100 p-5 transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-base-200/50">
+                        <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Next after knowledge</div>
+                        <div className="mt-2 text-xl font-semibold text-neutral">Capture one update</div>
+                        <p className="mt-3 text-sm leading-6 text-base-content/70">
+                          Use Updates for chronological field notes, check-ins, and the latest team signal.
+                        </p>
+                      </Link>
+
+                      <Link href={`/dashboard/${workspace.slug}/report`} className="group rounded-[1.75rem] border border-base-300 bg-base-100 p-5 transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-base-200/50">
+                        <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Then compile</div>
+                        <div className="mt-2 text-xl font-semibold text-neutral">Generate a progress summary</div>
+                        <p className="mt-3 text-sm leading-6 text-base-content/70">
+                          Reports turn your current context into a clean progress snapshot once the workspace has a little data.
+                        </p>
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-[1.75rem] border border-base-300 bg-base-100 p-5">
+                    <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Other sections, when you need them</div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-3 text-sm leading-6 text-base-content/72">
+                      <div><span className="font-medium text-neutral">Ask</span>: query existing knowledge and update history.</div>
+                      <div><span className="font-medium text-neutral">Tasks</span>: track shared next steps after action items appear.</div>
+                      <div><span className="font-medium text-neutral">Hub</span>: return here when you want the overall workspace picture.</div>
+                    </div>
+                  </div>
+                </>) : (<>
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="section-kicker">Workspace actions</p>
+                      <h2 className="mt-2 text-3xl font-semibold text-neutral">Go to a focused view</h2>
+                      <p className="mt-3 max-w-2xl text-sm leading-7 text-base-content/68">
+                        Each workspace function lives on its own screen. Use this hub to decide whether you want to manage source material, capture what the team is seeing, ask questions, or turn suggested next steps into tracked work.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+                    <Link href={`/dashboard/${workspace.slug}/knowledge`} className="group rounded-[1.9rem] border border-base-300 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,237,225,0.88))] p-6 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-soft">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Knowledge</div>
+                          <div className="mt-3 text-2xl font-semibold text-neutral">Source material and indexed context</div>
+                        </div>
+                        <span className="rounded-full border border-primary/20 px-3 py-1 text-xs uppercase tracking-[0.18em] text-primary/70">
+                          {files.length} files
+                        </span>
                       </div>
-                      <span className="badge badge-outline">AI</span>
+                      <p className="mt-4 max-w-xl text-sm leading-7 text-base-content/72">
+                        Add files, notes, and extracted project context so the workspace has a durable source of truth before the team starts asking questions about it.
+                      </p>
+                      <div className="mt-6 text-sm font-medium text-primary transition group-hover:translate-x-1">Open knowledge view</div>
+                    </Link>
+
+                    <div className="grid gap-4">
+                      <Link href={`/dashboard/${workspace.slug}/updates`} className="group rounded-[1.75rem] border border-base-300 bg-base-100 p-5 transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-base-200/50">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Updates</div>
+                            <div className="mt-2 text-xl font-semibold text-neutral">Capture what the team is seeing</div>
+                          </div>
+                          <span className="badge badge-outline">{updates.length}</span>
+                        </div>
+                        <p className="mt-3 text-sm leading-6 text-base-content/70">
+                          Record typed or voice updates, keep the verbatim record, and store the structured version alongside it.
+                        </p>
+                      </Link>
+
+                      <Link href={`/dashboard/${workspace.slug}/chat`} className="group rounded-[1.75rem] border border-base-300 bg-base-100 p-5 transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-base-200/50">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Ask workspace</div>
+                            <div className="mt-2 text-xl font-semibold text-neutral">Query the workspace like a chatbot</div>
+                          </div>
+                          <span className="badge badge-outline">AI</span>
+                        </div>
+                        <p className="mt-3 text-sm leading-6 text-base-content/70">
+                          Ask grounded questions across the uploaded knowledge, team updates, and active tasks without leaving the workspace.
+                        </p>
+                      </Link>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-base-content/70">
-                      Ask grounded questions across the uploaded knowledge, team updates, and active tasks without leaving the workspace.
+                  </div>
+
+                  <div className="mt-4 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+                    <Link href={`/dashboard/${workspace.slug}/tasks`} className="group rounded-[1.75rem] border border-base-300 bg-base-100 p-5 transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-base-200/50">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Tasks</div>
+                          <div className="mt-2 text-xl font-semibold text-neutral">Track next steps in one place</div>
+                        </div>
+                        <span className="badge badge-outline">{tasks.length}</span>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-base-content/70">
+                        Convert action signals into a real shared queue with owners, due dates, and status changes.
+                      </p>
+                    </Link>
+
+                    <Link href={`/dashboard/${workspace.slug}/report`} className="group rounded-[1.75rem] border border-base-300 bg-base-100 p-5 transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-base-200/50">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Progress report</div>
+                          <div className="mt-2 text-xl font-semibold text-neutral">Generate a client-ready progress summary</div>
+                        </div>
+                        <span className="badge badge-outline">Report</span>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-base-content/70">
+                        Turn the current knowledge, updates, and task signals into a compact progress summary you can review before sending.
+                      </p>
+                    </Link>
+                  </div>
+
+                  <div className="mt-4 rounded-[1.75rem] border border-base-300 bg-base-100 p-5">
+                    <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Suggested flow</div>
+                    <div className="mt-4 flex flex-wrap items-center gap-3 text-sm leading-6 text-base-content/72">
+                      <span className="rounded-full bg-base-200 px-4 py-2 font-medium text-neutral">1. Gather in Knowledge</span>
+                      <span className="hidden text-base-content/35 md:inline">/</span>
+                      <span className="rounded-full bg-base-200 px-4 py-2 font-medium text-neutral">2. Capture in Updates</span>
+                      <span className="hidden text-base-content/35 md:inline">/</span>
+                      <span className="rounded-full bg-base-200 px-4 py-2 font-medium text-neutral">3. Review in Chat</span>
+                      <span className="hidden text-base-content/35 md:inline">/</span>
+                      <span className="rounded-full bg-base-200 px-4 py-2 font-medium text-neutral">4. Review in Progress Report</span>
+                    </div>
+                    <p className="mt-4 text-sm leading-7 text-base-content/66">
+                      Upload the source material first, collect what members are seeing on the ground, validate the picture in chat if needed, then generate a progress summary for review.
                     </p>
-                  </Link>
-                </div>
-              </div>
-
-              <div className="mt-4 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-                <Link href={`/dashboard/${workspace.slug}/tasks`} className="group rounded-[1.75rem] border border-base-300 bg-base-100 p-5 transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-base-200/50">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Tasks</div>
-                      <div className="mt-2 text-xl font-semibold text-neutral">Track next steps in one place</div>
-                    </div>
-                    <span className="badge badge-outline">{tasks.length}</span>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-base-content/70">
-                    Convert action signals into a real shared queue with owners, due dates, and status changes.
-                  </p>
-                </Link>
-
-                <Link href={`/dashboard/${workspace.slug}/report`} className="group rounded-[1.75rem] border border-base-300 bg-base-100 p-5 transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-base-200/50">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Progress report</div>
-                      <div className="mt-2 text-xl font-semibold text-neutral">Generate a client-ready progress summary</div>
-                    </div>
-                    <span className="badge badge-outline">Report</span>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-base-content/70">
-                    Turn the current knowledge, updates, and task signals into a compact progress summary you can review before sending.
-                  </p>
-                </Link>
-              </div>
-
-              <div className="mt-4 rounded-[1.75rem] border border-base-300 bg-base-100 p-5">
-                <div className="text-xs uppercase tracking-[0.22em] text-primary/60">Suggested flow</div>
-                <div className="mt-4 flex flex-wrap items-center gap-3 text-sm leading-6 text-base-content/72">
-                  <span className="rounded-full bg-base-200 px-4 py-2 font-medium text-neutral">1. Gather in Knowledge</span>
-                  <span className="hidden text-base-content/35 md:inline">/</span>
-                  <span className="rounded-full bg-base-200 px-4 py-2 font-medium text-neutral">2. Capture in Updates</span>
-                  <span className="hidden text-base-content/35 md:inline">/</span>
-                  <span className="rounded-full bg-base-200 px-4 py-2 font-medium text-neutral">3. Review in Chat</span>
-                  <span className="hidden text-base-content/35 md:inline">/</span>
-                  <span className="rounded-full bg-base-200 px-4 py-2 font-medium text-neutral">4. Review in Progress Report</span>
-                </div>
-                <p className="mt-4 text-sm leading-7 text-base-content/66">
-                  Upload the source material first, collect what members are seeing on the ground, validate the picture in chat if needed, then generate a progress summary for review.
-                </p>
-              </div>
+                </>)}
             </div>
 
             <div className="glass-panel rounded-[2rem] p-7">

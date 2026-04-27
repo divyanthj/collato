@@ -47,6 +47,9 @@ export default async function WorkspaceChatPage({ params }) {
               <p className="mt-4 max-w-3xl text-base leading-8 text-base-content/72">
                 Query the knowledge base separately when you want answers grounded in the workspace files and update history.
               </p>
+              <div className="mt-4 rounded-[1.25rem] border border-base-300 bg-base-100/85 px-4 py-3 text-sm leading-6 text-base-content/70">
+                <span className="font-medium text-neutral">Use this when:</span> the workspace already has some context and you want answers, summaries, or follow-up questions over that saved material.
+              </div>
             </div>
           </div>
           <WorkspaceSubnav workspaceSlug={workspace.slug} activeTab="chat"/>

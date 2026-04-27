@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
+import { trackDatafastGoal } from "@/lib/client-analytics";
 export function AuthEntryPanel({ mode = "hero", redirectTo = "/dashboard" }) {
     const [email, setEmail] = useState("");
     const [error, setError] = useState(null);
@@ -11,6 +12,10 @@ export function AuthEntryPanel({ mode = "hero", redirectTo = "/dashboard" }) {
     const handleEmailSignIn = () => {
         setError(null);
         setStatusMessage(null);
+        trackDatafastGoal("auth_started", {
+            method: "email_magic_link",
+            source: mode === "compact" ? "dashboard_sidebar" : "hero_panel"
+        });
         startTransition(async () => {
             try {
                 const response = await fetch("/api/auth/email-signin", {
@@ -38,9 +43,9 @@ export function AuthEntryPanel({ mode = "hero", redirectTo = "/dashboard" }) {
     return (<div className={mode === "compact" ? "space-y-3" : "rounded-[1.9rem] border border-base-300 bg-base-100/85 p-5"}>
       {mode === "hero" ? (<div>
           <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Sign in</div>
-          <div className="mt-2 text-xl font-semibold text-neutral">Use Google or an email magic link</div>
+          <div className="mt-2 text-xl font-semibold text-neutral">Sign in to start workspace setup</div>
           <p className="mt-2 text-sm leading-7 text-base-content/70">
-            Invitees can join with the same email address they were added with, even if they do not want to use Google.
+            Use the same invited email address if you were added to a team. Otherwise, sign in to create your first workspace and generate a report-ready summary faster.
           </p>
         </div>) : null}
 

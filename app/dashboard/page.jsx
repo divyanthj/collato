@@ -1,11 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth, signIn, signOut } from "@/auth";
-import logo from "@/app/logo.png";
-import appConfig from "@/config/app";
+import { auth } from "@/auth";
 import { AccessGateway } from "@/components/access-gateway";
-import { AuthEntryPanel } from "@/components/auth-entry-panel";
+import { ClientEventTracker } from "@/components/client-event-tracker";
 import { CreateOrganizationButton } from "@/components/create-organization-button";
 import { InviteInbox } from "@/components/invite-inbox";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
@@ -49,6 +46,7 @@ export default async function WorkspacePage({ searchParams }) {
     const selectedOrganizationSlug = readSearchParam(searchParams?.org);
     const orgCreated = readSearchParam(searchParams?.orgCreated) === "1";
     const inviteAccepted = readSearchParam(searchParams?.inviteAccepted) === "1";
+    const authSuccess = readSearchParam(searchParams?.authSuccess) === "1";
     const blockedWorkspaceSlug = readSearchParam(searchParams?.workspace);
     const blockedWorkspaceName = readSearchParam(searchParams?.workspaceName);
     const blockedWorkspaceReason = readSearchParam(searchParams?.workspaceReason);
@@ -88,6 +86,13 @@ export default async function WorkspacePage({ searchParams }) {
     if (session?.user?.email && accessGate && !organization) {
         return (<main className="min-h-screen px-4 py-6 lg:px-6">
       <section className="mx-auto max-w-7xl">
+        {session?.user?.email ? <ClientEventTracker
+            goalName="auth_success"
+            metadata={{
+                source: authSuccess ? "auth_redirect" : "dashboard_session"
+            }}
+            oncePerSessionKey={`auth_success:${session.user.email}`}
+          /> : null}
         <AccessGateway
           displayName={signedInUserName}
           suggestedOrganizationName={accessGate.suggestedOrganizationName}
@@ -102,60 +107,14 @@ export default async function WorkspacePage({ searchParams }) {
     </main>);
     }
     return (<main className="min-h-screen px-4 py-4 lg:px-6">
-      <div className="mx-auto grid max-w-[1500px] gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="glass-panel rounded-[2rem] p-5 xl:sticky xl:top-4 xl:self-start">
-          <div className="brand-card p-3">
-            <Image
-              src={logo}
-              alt="Collato.io logo"
-              width={420}
-              height={220}
-              className="h-auto w-full"
-            />
-            <div className="mt-3 text-xs uppercase tracking-[0.22em] text-base-content/55">
-              {appConfig.brand.tagline}
-            </div>
-          </div>
-
-          <div className="mt-8 rounded-[1.5rem] bg-base-100 p-4">
-            <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Account</div>
-            {session?.user ? (<div className="mt-3 space-y-3">
-                <div>
-                  <div className="font-semibold text-neutral">{signedInUserName}</div>
-                  <div className="text-sm text-base-content/60">{session.user.email}</div>
-                </div>
-                <form action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/" });
-            }}>
-                  <button className="btn btn-outline btn-sm w-full">Sign out</button>
-                </form>
-              </div>) : (<div className="mt-3 space-y-3">
-                <form action={async () => {
-                "use server";
-                await signIn("google", {
-                    redirectTo: "/dashboard",
-                    prompt: "select_account"
-                });
-            }}>
-                  <button className="btn btn-primary btn-sm w-full">Continue with Google</button>
-                </form>
-                <AuthEntryPanel mode="compact"/>
-              </div>)}
-          </div>
-
-          <div className="mt-8 rounded-[1.5rem] bg-neutral p-4 text-neutral-content">
-            <div className="text-xs uppercase tracking-[0.24em] text-secondary">Organization</div>
-            <p className="mt-3 text-sm leading-7 text-neutral-content/78">
-              The organization is now the top level. Members can create workspaces inside it, and the org owner can keep sight of everything happening across the workspace layer.
-            </p>
-          </div>
-
-          <Link href="/" className="mt-8 btn btn-outline btn-sm w-full">
-            Back to site
-          </Link>
-        </aside>
-
+      {session?.user?.email ? <ClientEventTracker
+          goalName="auth_success"
+          metadata={{
+              source: authSuccess ? "auth_redirect" : "dashboard_session"
+          }}
+          oncePerSessionKey={`auth_success:${session.user.email}`}
+        /> : null}
+      <div className="mx-auto max-w-[1500px]">
         <section className="min-w-0 space-y-4">
           {(pendingOrganizationInvites.length > 0 || pendingWorkspaceInvites.length > 0) ? (
             <div className="glass-panel rounded-[2rem] p-6">
@@ -224,34 +183,14 @@ export default async function WorkspacePage({ searchParams }) {
             </div>
           </div>
 
-          {organization ? (<div className="glass-panel rounded-[2rem] p-6">
+          <div className="glass-panel rounded-[2rem] p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Organization members</div>
-                  <h2 className="mt-2 text-2xl font-semibold text-neutral">Who can create and join workspaces</h2>
-                </div>
-                <div className="badge badge-outline self-start sm:self-center">{organization.workspaceCount} workspaces in org</div>
-              </div>
-
-              <div className="mt-6">
-                <OrganizationMemberManager organization={organization} canManageMembers={permissions.canManageOrganizationMembers} organizationRole={permissions.organizationRole}/>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <Link href={`/dashboard/organization${organizationQuery}`} className="btn btn-outline btn-sm">
-                  Open full organization settings
-                </Link>
-              </div>
-            </div>) : null}
-
-          <div className="glass-panel rounded-[2rem] p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
                 <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Workspaces</div>
                 <h2 className="mt-2 text-2xl font-semibold text-neutral">Your workspaces</h2>
-              </div>
+                </div>
               <div className="badge badge-outline self-start sm:self-center">{workspaces.length} total</div>
-            </div>
+              </div>
 
             <div className="mt-6 space-y-4">
               {workspaces.length > 0 ? (workspaces.map((workspace) => (<div key={workspace.slug} className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5">
@@ -304,8 +243,38 @@ export default async function WorkspacePage({ searchParams }) {
                   </div>))) : (<div className="rounded-[1.5rem] border border-dashed border-base-300 bg-base-100 p-10 text-center text-sm leading-7 text-base-content/60">
                   No workspaces yet. Create the first workspace to begin collecting files and updates.
                 </div>)}
-            </div>
+              </div>
           </div>
+
+          {organization ? (<div className="glass-panel rounded-[2rem] p-6">
+              <div className="collapse collapse-arrow rounded-[1.5rem] border border-base-300 bg-base-100">
+                <input type="checkbox" aria-label="Toggle organization members" />
+                <div className="collapse-title pr-12">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Organization members</div>
+                      <h2 className="mt-2 text-2xl font-semibold text-neutral">Who can create and join workspaces</h2>
+                      <p className="mt-2 text-sm leading-6 text-base-content/65">
+                        Expand when you need to invite people or update organization-level roles.
+                      </p>
+                    </div>
+                    <div className="badge badge-outline self-start sm:self-center">{organization.workspaceCount} workspaces in org</div>
+                  </div>
+                </div>
+
+                <div className="collapse-content">
+                  <div className="pt-2">
+                    <OrganizationMemberManager organization={organization} canManageMembers={permissions.canManageOrganizationMembers} organizationRole={permissions.organizationRole}/>
+                  </div>
+
+                  <div className="mt-6 flex justify-end">
+                    <Link href={`/dashboard/organization${organizationQuery}`} className="btn btn-outline btn-sm">
+                      Open full organization settings
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>) : null}
         </section>
       </div>
     </main>);
