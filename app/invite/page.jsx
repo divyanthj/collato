@@ -22,13 +22,15 @@ export default async function InvitePage({ searchParams }) {
   const role = readSearchParam(searchParams?.role);
 
   if (session?.user?.email) {
+    let redirectTarget = "";
+
     try {
       if (type === "organization" && organizationSlug) {
         await acceptOrganizationInvite({
           organizationSlug,
           userEmail: session.user.email,
         });
-        redirect(`/dashboard?org=${encodeURIComponent(organizationSlug)}&inviteAccepted=1`);
+        redirectTarget = `/dashboard?org=${encodeURIComponent(organizationSlug)}&inviteAccepted=1`;
       }
 
       if (type === "workspace" && workspaceSlug) {
@@ -36,7 +38,7 @@ export default async function InvitePage({ searchParams }) {
           workspaceSlug,
           userEmail: session.user.email,
         });
-        redirect(`/dashboard/${encodeURIComponent(workspaceSlug)}?inviteAccepted=1`);
+        redirectTarget = `/dashboard/${encodeURIComponent(workspaceSlug)}?inviteAccepted=1`;
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not accept invitation";
@@ -52,6 +54,10 @@ export default async function InvitePage({ searchParams }) {
           </section>
         </main>
       );
+    }
+
+    if (redirectTarget) {
+      redirect(redirectTarget);
     }
   }
 
