@@ -63,14 +63,14 @@ export default async function InvitePage({ searchParams }) {
 
   return (
     <InviteAcceptLanding
-      searchParams={new URLSearchParams({
+      inviteParams={{
         type,
         organizationSlug,
         workspaceSlug,
         organizationName,
         name,
         role,
-      })}
+      }}
     />
   );
 }

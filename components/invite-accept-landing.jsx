@@ -5,17 +5,20 @@ import { signIn } from "next-auth/react";
 import { AuthEntryPanel } from "@/components/auth-entry-panel";
 
 function readSearchParam(searchParams, key) {
-  const value = searchParams?.get(key);
+  const value = typeof searchParams?.get === "function"
+    ? searchParams.get(key)
+    : searchParams?.[key];
   return typeof value === "string" ? value : "";
 }
 
-export function InviteAcceptLanding({ searchParams }) {
-  const type = readSearchParam(searchParams, "type");
-  const organizationSlug = readSearchParam(searchParams, "organizationSlug");
-  const workspaceSlug = readSearchParam(searchParams, "workspaceSlug");
-  const inviteName = readSearchParam(searchParams, "name");
-  const organizationName = readSearchParam(searchParams, "organizationName");
-  const role = readSearchParam(searchParams, "role");
+export function InviteAcceptLanding({ inviteParams = {}, searchParams }) {
+  const params = inviteParams ?? searchParams;
+  const type = readSearchParam(params, "type");
+  const organizationSlug = readSearchParam(params, "organizationSlug");
+  const workspaceSlug = readSearchParam(params, "workspaceSlug");
+  const inviteName = readSearchParam(params, "name");
+  const organizationName = readSearchParam(params, "organizationName");
+  const role = readSearchParam(params, "role");
   const currentUrl = useMemo(() => {
     if (typeof window === "undefined") {
       return "/invite";
