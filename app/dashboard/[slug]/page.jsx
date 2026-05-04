@@ -136,7 +136,7 @@ export default async function WorkspaceDetailPage({ params, searchParams }) {
                   </div>
 
                   <div className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-                    <Link href={`/dashboard/${workspace.slug}/knowledge`} className="group rounded-[1.9rem] border border-primary/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(236,246,255,0.94))] p-6 transition hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-soft">
+                    <Link href={`/dashboard/${workspace.slug}/knowledge`} className="group rounded-[1.9rem] border border-primary/30 bg-[linear-gradient(145deg,rgba(17,22,37,0.98),rgba(10,15,28,0.96))] p-6 transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-soft">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Primary next step</div>
@@ -146,7 +146,7 @@ export default async function WorkspaceDetailPage({ params, searchParams }) {
                           {files.length} files
                         </span>
                       </div>
-                      <p className="mt-4 max-w-xl text-sm leading-7 text-base-content/72">
+                      <p className="mt-4 max-w-xl text-sm leading-7 text-base-content/78">
                         Use Knowledge for long-lived reference material: documents, notes, screenshots, transcripts, and facts your team will reuse later.
                       </p>
                       <div className="mt-6 text-sm font-medium text-primary transition group-hover:translate-x-1">Open Knowledge</div>
@@ -191,7 +191,7 @@ export default async function WorkspaceDetailPage({ params, searchParams }) {
                   </div>
 
                   <div className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-                    <Link href={`/dashboard/${workspace.slug}/knowledge`} className="group rounded-[1.9rem] border border-base-300 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,237,225,0.88))] p-6 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-soft">
+                    <Link href={`/dashboard/${workspace.slug}/knowledge`} className="group rounded-[1.9rem] border border-primary/22 bg-[linear-gradient(145deg,rgba(18,23,39,0.98),rgba(11,16,29,0.96))] p-6 transition hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-soft">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Knowledge</div>
@@ -201,7 +201,7 @@ export default async function WorkspaceDetailPage({ params, searchParams }) {
                           {files.length} files
                         </span>
                       </div>
-                      <p className="mt-4 max-w-xl text-sm leading-7 text-base-content/72">
+                      <p className="mt-4 max-w-xl text-sm leading-7 text-base-content/78">
                         Add files, notes, and extracted project context so the workspace has a durable source of truth before the team starts asking questions about it.
                       </p>
                       <div className="mt-6 text-sm font-medium text-primary transition group-hover:translate-x-1">Open knowledge view</div>

@@ -40,11 +40,11 @@ export function AuthEntryPanel({ mode = "hero", redirectTo = "/dashboard" }) {
             }
         });
     };
-    return (<div className={mode === "compact" ? "space-y-3" : "rounded-[1.9rem] border border-base-300 bg-base-100/85 p-5"}>
+    return (<div className={mode === "compact" ? "space-y-3" : "rounded-[1.9rem] border border-white/8 bg-white/[0.03] p-5"}>
       {mode === "hero" ? (<div>
-          <div className="text-xs uppercase tracking-[0.24em] text-primary/60">Sign in</div>
+          <div className="text-xs uppercase tracking-[0.24em] text-primary/80">Sign in</div>
           <div className="mt-2 text-xl font-semibold text-neutral">Sign in to start workspace setup</div>
-          <p className="mt-2 text-sm leading-7 text-base-content/70">
+          <p className="mt-2 text-sm leading-7 text-base-content/74">
             Use the same invited email address if you were added to a team. Otherwise, sign in to create your first workspace and generate a report-ready summary faster.
           </p>
         </div>) : null}

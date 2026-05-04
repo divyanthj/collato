@@ -105,13 +105,13 @@ export const VoiceInputButton = forwardRef(function VoiceInputButton({ onTranscr
         };
     }, [cleanupRecordingResources]);
     return (<div className="flex items-center gap-3">
-      {!isRecording ? (<button ref={ref} type="button" className="btn btn-circle border border-base-300 bg-base-100 text-neutral shadow-sm" onClick={handleStartRecording} disabled={isTranscribing} title="Tap to speak. Only the transcript is saved.">
+      {!isRecording ? (<button ref={ref} type="button" className="btn btn-circle border border-white/10 bg-white/[0.04] text-neutral shadow-sm hover:bg-white/[0.08]" onClick={handleStartRecording} disabled={isTranscribing} title="Tap to speak. Only the transcript is saved.">
           {isTranscribing ? (<span className="loading loading-spinner loading-xs"/>) : (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 15.75a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6.75a3 3 0 0 0 3 3Z"/>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5v.75a7.5 7.5 0 0 1-15 0v-.75"/>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75V21m-3 0h6"/>
             </svg>)}
-        </button>) : (<button type="button" className="btn btn-circle btn-neutral" onClick={handleStopRecording} title="Stop recording">
+        </button>) : (<button type="button" className="btn btn-circle border-0 bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-[0_14px_30px_rgba(239,68,68,0.35)] hover:brightness-105" onClick={handleStopRecording} title="Stop recording">
           <span className="block h-3 w-3 rounded-sm bg-white"/>
         </button>)}
 

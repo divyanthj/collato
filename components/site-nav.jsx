@@ -21,10 +21,10 @@ export async function SiteNav() {
   const session = await auth();
 
   return (
-    <header className="sticky top-0 z-50 max-w-full overflow-hidden border-b border-white/70 bg-base-100/78 px-3 py-3 shadow-[0_14px_44px_rgba(17,53,84,0.08)] backdrop-blur-2xl sm:px-4 lg:px-8">
+    <header className="sticky top-0 z-50 max-w-full overflow-hidden border-b border-white/8 bg-base-100/82 px-3 py-3 shadow-[0_18px_54px_rgba(2,6,23,0.34)] backdrop-blur-2xl sm:px-4 lg:px-8">
       <nav className="mx-auto flex max-w-[1500px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between" aria-label="Primary navigation">
         <Link href="/" className="group flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/80 bg-white shadow-sm transition group-hover:-translate-y-0.5 sm:h-11 sm:w-11">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-sm transition group-hover:-translate-y-0.5 sm:h-11 sm:w-11">
             <Image
               src="/collato-logo.jpg"
               alt={`${appConfig.appName} logo`}
@@ -38,7 +38,7 @@ export async function SiteNav() {
             <span className="block truncate font-display text-lg font-semibold leading-none text-neutral sm:text-xl">
               {appConfig.appName}
             </span>
-            <span className="hidden text-xs uppercase tracking-[0.2em] text-primary/60 sm:block">
+            <span className="hidden text-xs uppercase tracking-[0.2em] text-primary/80 sm:block">
               Project memory hub
             </span>
           </span>
@@ -50,14 +50,14 @@ export async function SiteNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="shrink-0 rounded-full px-3 py-2 text-xs font-medium text-base-content/72 transition hover:bg-white/80 hover:text-neutral sm:text-sm"
+                className="shrink-0 rounded-full px-3 py-2 text-xs font-medium text-base-content/78 transition hover:bg-white/[0.06] hover:text-neutral sm:text-sm"
               >
                 {item.label}
               </Link>
             ))}
             <Link
               href={SIGN_IN_URL}
-              className="shrink-0 rounded-full px-3 py-2 text-xs font-medium text-base-content/72 transition hover:bg-white/80 hover:text-neutral sm:text-sm"
+              className="shrink-0 rounded-full px-3 py-2 text-xs font-medium text-base-content/78 transition hover:bg-white/[0.06] hover:text-neutral sm:text-sm"
             >
               Dashboard
             </Link>
@@ -65,7 +65,7 @@ export async function SiteNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="shrink-0 rounded-full px-3 py-2 text-xs font-medium text-base-content/72 transition hover:bg-white/80 hover:text-neutral sm:text-sm"
+                className="shrink-0 rounded-full px-3 py-2 text-xs font-medium text-base-content/78 transition hover:bg-white/[0.06] hover:text-neutral sm:text-sm"
               >
                 {item.label}
               </Link>
@@ -76,7 +76,7 @@ export async function SiteNav() {
         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           {session?.user ? (
             <>
-              <span className="hidden max-w-[220px] truncate rounded-full bg-white/70 px-3 py-2 text-sm text-base-content/65 xl:block">
+              <span className="hidden max-w-[220px] truncate rounded-full border border-white/8 bg-white/[0.03] px-3 py-2 text-sm text-base-content/70 xl:block">
                 {session.user.name || session.user.email}
               </span>
               <form

@@ -3,11 +3,12 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
-  --brand-ink: #18324a;
-  --brand-teal: #169cb0;
-  --brand-mint: #39d2ab;
-  --brand-blue: #2976df;
+  color-scheme: dark;
+  --brand-ink: #f5f7ff;
+  --brand-teal: #10b7a5;
+  --brand-mint: #1ed39b;
+  --brand-blue: #4f7cff;
+  --brand-violet: #7c4dff;
 }
 
 html {
@@ -17,10 +18,10 @@ html {
 body {
   @apply min-h-screen bg-base-100 text-base-content;
   background-image:
-    radial-gradient(circle at 10% 12%, rgba(22, 156, 176, 0.12), transparent 24%),
-    radial-gradient(circle at 90% 10%, rgba(41, 118, 223, 0.12), transparent 26%),
-    radial-gradient(circle at 50% 100%, rgba(57, 210, 171, 0.1), transparent 20%),
-    linear-gradient(180deg, #f8fcff 0%, #eff7ff 54%, #f7fcfb 100%);
+    radial-gradient(circle at 12% 10%, rgba(92, 86, 255, 0.14), transparent 24%),
+    radial-gradient(circle at 84% 8%, rgba(53, 120, 255, 0.12), transparent 26%),
+    radial-gradient(circle at 50% 88%, rgba(20, 184, 166, 0.1), transparent 22%),
+    linear-gradient(180deg, #050711 0%, #080d19 42%, #091120 100%);
   font-family: var(--font-body), sans-serif;
 }
 
@@ -33,18 +34,88 @@ h3,
 }
 
 .glass-panel {
-  @apply border border-white/70 bg-white/75 backdrop-blur-xl;
-  box-shadow: 0 30px 80px rgba(17, 53, 84, 0.08);
+  @apply border backdrop-blur-xl;
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(12, 18, 32, 0.82);
+  box-shadow: 0 28px 90px rgba(1, 5, 18, 0.52);
 }
 
 .section-kicker {
-  @apply text-xs font-semibold uppercase tracking-[0.28em] text-primary/70;
+  @apply text-xs font-semibold uppercase tracking-[0.28em] text-primary/90;
 }
 
 .brand-card {
-  @apply rounded-[2rem] border border-white/80 bg-white/85 shadow-soft;
+  @apply rounded-[2rem] border shadow-soft;
+  border-color: rgba(255, 255, 255, 0.08);
+  background-image: linear-gradient(180deg, rgba(15, 20, 34, 0.92), rgba(10, 14, 24, 0.96));
 }
 
 .brand-orb {
-  background-image: linear-gradient(135deg, var(--brand-teal), var(--brand-blue) 58%, var(--brand-mint));
+  background-image: linear-gradient(135deg, var(--brand-violet), var(--brand-blue) 58%, var(--brand-teal));
+}
+
+.btn-primary {
+  border: 0;
+  box-shadow: 0 18px 42px rgba(91, 94, 247, 0.28);
+  background-image: linear-gradient(135deg, var(--brand-violet), var(--brand-blue));
+  color: #f8f9ff;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.06);
+}
+
+.btn-primary:disabled,
+.btn-primary[disabled] {
+  background-image: linear-gradient(135deg, rgba(124, 77, 255, 0.52), rgba(79, 124, 255, 0.52));
+  background-color: rgba(79, 124, 255, 0.28);
+  color: rgba(248, 249, 255, 0.72);
+  opacity: 1;
+  box-shadow: none;
+}
+
+.btn-outline {
+  border-color: rgba(255, 255, 255, 0.18);
+  background-color: transparent;
+  color: hsl(var(--bc) / 1);
+}
+
+.btn-outline:hover {
+  border-color: rgba(255, 255, 255, 0.24);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: hsl(var(--n) / 1);
+}
+
+.input,
+.textarea,
+.select,
+.file-input {
+  border-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.03);
+  color: hsl(var(--bc) / 1);
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus,
+.file-input:focus {
+  outline: none;
+  border-color: rgba(91, 94, 247, 0.7);
+  box-shadow: 0 0 0 1px rgba(91, 94, 247, 0.34);
+}
+
+.file-input::file-selector-button {
+  border: 0;
+  margin-right: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f5f7ff;
+}
+
+.badge-outline {
+  border-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.link-hover:hover {
+  color: #f5f7ff;
 }
