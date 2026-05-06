@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { AccessGateway } from "@/components/access-gateway";
 import { ClientEventTracker } from "@/components/client-event-tracker";
 import { CreateOrganizationButton } from "@/components/create-organization-button";
+import { DashboardTodayPanel } from "@/components/dashboard-today-panel";
 import { InviteInbox } from "@/components/invite-inbox";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import { OrganizationMemberManager } from "@/components/organization-member-manager";
@@ -50,7 +51,7 @@ export default async function WorkspacePage({ searchParams }) {
     const blockedWorkspaceSlug = readSearchParam(searchParams?.workspace);
     const blockedWorkspaceName = readSearchParam(searchParams?.workspaceName);
     const blockedWorkspaceReason = readSearchParam(searchParams?.workspaceReason);
-    const { organization, organizations, workspaces, permissions, accessGate, pendingOrganizationInvites, pendingWorkspaceInvites, fallbackFromGatedOrg } = await getWorkspaceDashboardData(session?.user?.email, session?.user?.name, selectedOrganizationSlug);
+    const { organization, organizations, workspaces, recentUpdates, todayTasks, permissions, accessGate, pendingOrganizationInvites, pendingWorkspaceInvites, fallbackFromGatedOrg } = await getWorkspaceDashboardData(session?.user?.email, session?.user?.name, selectedOrganizationSlug);
     const organizationQuery = organization?.slug ? `?org=${encodeURIComponent(organization.slug)}` : "";
     const workspaceBlockedMessage = blockedWorkspaceSlug
         ? blockedWorkspaceReason === "subscription_required"
@@ -136,6 +137,18 @@ export default async function WorkspacePage({ searchParams }) {
                 />
               </div>
             </div>
+          ) : null}
+
+          {organization ? (
+            <DashboardTodayPanel
+              workspaces={workspaces}
+              todayTasks={todayTasks}
+              recentUpdates={recentUpdates}
+              isAuthenticated={Boolean(session?.user?.email)}
+              currentUserName={signedInUserName}
+              currentUserEmail={session?.user?.email ?? ""}
+              canManageAiPrivacy={permissions.organizationRole === "owner"}
+            />
           ) : null}
 
           <div className="glass-panel rounded-[2rem] p-6">

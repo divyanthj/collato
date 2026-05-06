@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 import { trackDatafastGoal } from "@/lib/client-analytics";
@@ -22,10 +23,17 @@ export function WorkspaceUpdateIntake({
     isAuthenticated,
     currentUserName,
     currentUserEmail,
-    canManageAiPrivacy = false
+    canManageAiPrivacy = false,
+    initialSelectedWorkspaceSlug = "",
+    captureRequest = null,
+    showHeader = true,
+    showActivity = true,
+    captureButtonLabel = "Capture update",
+    headerTitle = "Updates",
+    headerDescription = "Capture typed notes, voice notes, screenshots, and files from this workspace in one clean flow."
 }) {
     const voiceButtonRef = useRef(null);
-    const [selectedWorkspaceSlug] = useState(workspaces[0]?.slug ?? "");
+    const [selectedWorkspaceSlug, setSelectedWorkspaceSlug] = useState(initialSelectedWorkspaceSlug || workspaces[0]?.slug || "");
     const [body, setBody] = useState("");
     const [audioData, setAudioData] = useState(null);
     const [isVoiceUsed, setIsVoiceUsed] = useState(false);
@@ -43,8 +51,27 @@ export function WorkspaceUpdateIntake({
     const [actionStateFilter, setActionStateFilter] = useState("active");
     const [actionStatusSavingKey, setActionStatusSavingKey] = useState(null);
     const [privacySavingUpdateId, setPrivacySavingUpdateId] = useState(null);
+    const [isClient, setIsClient] = useState(false);
     const [isSubmitting, startSubmitting] = useTransition();
     const selectedWorkspace = useMemo(() => workspaces.find((workspace) => workspace.slug === selectedWorkspaceSlug) ?? workspaces[0], [selectedWorkspaceSlug, workspaces]);
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+    useEffect(() => {
+        if (!captureRequest?.key) {
+            return;
+        }
+        const requestedWorkspace = workspaces.find((workspace) => workspace.slug === captureRequest.workspaceSlug);
+        if (requestedWorkspace) {
+            setSelectedWorkspaceSlug(requestedWorkspace.slug);
+        }
+        else if (!selectedWorkspaceSlug && workspaces[0]) {
+            setSelectedWorkspaceSlug(workspaces[0].slug);
+        }
+        setError(null);
+        setStatusMessage(null);
+        setIsCaptureDialogOpen(true);
+    }, [captureRequest?.key, captureRequest?.workspaceSlug, selectedWorkspaceSlug, workspaces]);
     const filteredUpdates = useMemo(() => {
         const normalizedQuery = searchQuery.trim().toLowerCase();
         return savedUpdates.filter((update) => {
@@ -389,13 +416,13 @@ export function WorkspaceUpdateIntake({
         }
     };
     return (<div className="space-y-5 sm:space-y-6">
-      <div className="glass-panel rounded-[1.6rem] p-5 sm:rounded-[2rem] sm:p-6">
+      {showHeader ? <div className="glass-panel rounded-[1.6rem] p-5 sm:rounded-[2rem] sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="section-kicker">Team updates</p>
-            <h2 className="mt-2 text-2xl font-semibold text-neutral sm:text-3xl">Updates</h2>
+            <h2 className="mt-2 text-2xl font-semibold text-neutral sm:text-3xl">{headerTitle}</h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-base-content/70">
-              Capture typed notes, voice notes, screenshots, and files from this workspace in one clean flow.
+              {headerDescription}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:justify-end">
@@ -412,13 +439,13 @@ export function WorkspaceUpdateIntake({
               }}
               disabled={!isAuthenticated || !selectedWorkspace}
             >
-              Capture update
+              {captureButtonLabel}
             </button>
           </div>
         </div>
-      </div>
+      </div> : null}
 
-      <div className="glass-panel rounded-[1.6rem] p-5 sm:rounded-[2rem] sm:p-6">
+      {showActivity ? <div className="glass-panel rounded-[1.6rem] p-5 sm:rounded-[2rem] sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="section-kicker">Latest result</p>
@@ -429,7 +456,7 @@ export function WorkspaceUpdateIntake({
         {statusMessage ? <AlertBanner tone="success" className="mt-6">{statusMessage}</AlertBanner> : null}
 
         {analysis ? (<div className="mt-6 space-y-4">
-            <div className="rounded-[1.5rem] bg-secondary/35 p-4 text-sm leading-7 text-secondary-content">
+            <div className="rounded-[1.5rem] bg-secondary/35 p-4 text-sm leading-7 text-white/90">
               {analysis.structured.summary}
             </div>
 
@@ -631,8 +658,8 @@ export function WorkspaceUpdateIntake({
                       </div>
                     </div>
                     <div className="mt-3 rounded-xl bg-secondary/35 p-3">
-                      <div className="text-xs uppercase tracking-[0.18em] text-secondary-content/70">Summary</div>
-                      <p className="mt-2 text-sm leading-6 text-secondary-content">{event.update.structured.summary}</p>
+                      <div className="text-xs uppercase tracking-[0.18em] text-white/65">Summary</div>
+                      <p className="mt-2 text-sm leading-6 text-white/90">{event.update.structured.summary}</p>
                     </div>
                     <div className="collapse collapse-arrow mt-3 rounded-xl bg-transparent">
                       <input type="checkbox"/>
@@ -646,9 +673,9 @@ export function WorkspaceUpdateIntake({
               </div>)}
           </div>
         </div>
-      </div>
+      </div> : statusMessage ? <AlertBanner tone="success">{statusMessage}</AlertBanner> : null}
 
-      {isCaptureDialogOpen ? (
+      {isClient && isCaptureDialogOpen ? createPortal((
         <div className="modal modal-open" role="dialog" aria-modal="true" aria-labelledby="capture-update-dialog-title">
           <div className="modal-box relative max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-4xl overflow-y-auto rounded-[1.5rem] bg-base-100 p-0 shadow-soft sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:rounded-[2rem]">
             <button
@@ -674,6 +701,26 @@ export function WorkspaceUpdateIntake({
             </div>
 
             <div className="grid gap-4 p-5 sm:p-6">
+              {workspaces.length > 1 ? (
+                <label className="form-control">
+                  <div className="label">
+                    <span className="label-text">Workspace</span>
+                  </div>
+                  <select
+                    className="select select-bordered"
+                    value={selectedWorkspaceSlug}
+                    onChange={(event) => setSelectedWorkspaceSlug(event.target.value)}
+                    disabled={!isAuthenticated || isSubmitting}
+                  >
+                    {workspaces.map((workspace) => (
+                      <option key={workspace.slug} value={workspace.slug}>
+                        {workspace.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
               <label className="form-control">
                 <div className="label flex-wrap items-start">
                   <div>
@@ -733,7 +780,7 @@ export function WorkspaceUpdateIntake({
             close
           </button>
         </div>
-      ) : null}
+      ), document.body) : null}
     </div>);
 }
 

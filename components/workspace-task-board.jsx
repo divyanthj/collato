@@ -14,6 +14,8 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
     const [description, setDescription] = useState("");
     const [assigneeEmail, setAssigneeEmail] = useState("");
     const [dueDate, setDueDate] = useState("");
+    const [sourceUpdateId, setSourceUpdateId] = useState("");
+    const [selectedSuggestionId, setSelectedSuggestionId] = useState("");
     const [error, setError] = useState(null);
     const [statusMessage, setStatusMessage] = useState(null);
     const [dragTaskId, setDragTaskId] = useState(null);
@@ -61,6 +63,8 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
                 setDescription("");
                 setAssigneeEmail("");
                 setDueDate("");
+                setSourceUpdateId("");
+                setSelectedSuggestionId("");
                 if (closeOnSuccess) {
                     setIsCreateDialogOpen(false);
                 }
@@ -82,15 +86,19 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
             title,
             description,
             assigneeEmail,
-            dueDate
-        }, { closeOnSuccess: true });
+            dueDate,
+            sourceUpdateId
+        }, { closeOnSuccess: true, suggestionId: selectedSuggestionId });
     };
     const handleSuggestedTask = (suggestion) => {
-        createTask({
-            title: suggestion.title,
-            description: `Imported from ${suggestion.channel} update by ${suggestion.createdByName}.`,
-            sourceUpdateId: suggestion.sourceUpdateId
-        }, { suggestionId: suggestion.id });
+        setError(null);
+        setStatusMessage("Suggestion copied into the form. Review it, then create the task.");
+        setTitle(suggestion.title);
+        setDescription(`Imported from ${suggestion.channel} update by ${suggestion.createdByName}.`);
+        setAssigneeEmail("");
+        setDueDate("");
+        setSourceUpdateId(suggestion.sourceUpdateId);
+        setSelectedSuggestionId(suggestion.id);
     };
     const handleTaskPatch = (taskId, updates) => {
         setError(null);
@@ -392,7 +400,7 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
                           {suggestion.createdByName} via {suggestion.channel} | {new Date(suggestion.createdAt).toLocaleDateString()}
                         </div>
                         <button type="button" className="btn btn-outline btn-sm mt-4" onClick={() => handleSuggestedTask(suggestion)} disabled={isPending}>
-                          Create task from this
+                          Use this suggestion
                         </button>
                       </div>))) : (<div className="rounded-[1.5rem] border border-dashed border-base-300 bg-base-100 p-8 text-center text-sm leading-7 text-base-content/60">
                       No action suggestions yet. As updates accumulate, extracted action items will appear here for quick conversion into tasks.
