@@ -54,6 +54,12 @@ Optional for contact form notifications:
 - OpenAI-powered update structuring via `/api/ai/structure-update`
 - Protected save flow via `/api/updates`
 
+## Integrating Collato into another app
+
+Collato can also run as an internal knowledge service for a customer's own app. The customer app keeps its own admin UI and auth, while Collato handles source ingestion, file extraction, embeddings, retrieval, and source-grounded answers through server-to-server APIs.
+
+Start with the integration docs in [`docs/integrations/README.md`](docs/integrations/README.md). They include the API reference, an AI-agent implementation playbook, copy-paste examples, and security/operations guidance.
+
 ## Resend setup
 
 1. Verify `resend.collato.io` as a sending domain in Resend.

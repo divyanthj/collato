@@ -9,7 +9,8 @@ const links = [
   { href: "#updates-tasks", label: "Updates, Tasks & Reports" },
   { href: "#ai-best-practices", label: "AI Best Practices" },
   { href: "#billing-seats", label: "Billing & Seats" },
-  { href: "#troubleshooting", label: "Troubleshooting" }
+  { href: "#troubleshooting", label: "Troubleshooting" },
+  { href: "/help/integrations", label: "Developer Integrations" }
 ];
 
 export const metadata = {
@@ -27,8 +28,8 @@ export default function HelpLayout({ children }) {
               <p className="section-kicker">Help Center</p>
               <h1 className="font-display mt-2 text-4xl font-semibold text-neutral lg:text-5xl">Collato documentation</h1>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-base-content/70">
-                Everything your team needs to set up projects, collect updates, use AI safely, and manage billing without
-                confusion.
+                Everything your team needs to set up projects, collect updates, use AI safely, manage billing, and connect
+                Collato to internal tools.
               </p>
             </div>
             <Link href="/" className="btn btn-outline">

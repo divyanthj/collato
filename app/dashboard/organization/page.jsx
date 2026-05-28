@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { CreateOrganizationButton } from "@/components/create-organization-button";
 import { OrganizationBillingManager } from "@/components/organization-billing-manager";
+import { IntegrationApiKeyManager } from "@/components/integration-api-key-manager";
 import { OrganizationMemberManager } from "@/components/organization-member-manager";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import { getBillingStatusForOrganization } from "@/lib/billing";
 import { getWorkspaceDashboardData } from "@/lib/data";
+import { listInternalApiKeys } from "@/lib/internal-api-keys";
 
 function readSearchParam(value) {
     if (Array.isArray(value)) {
@@ -27,6 +29,12 @@ export default async function OrganizationSettingsPage({ searchParams }) {
     }
     const isOwner = permissions.organizationRole === "owner";
     const billingStatus = isOwner ? await getBillingStatusForOrganization(organization) : null;
+    const integrationKeys = isOwner
+        ? await listInternalApiKeys({
+            organizationSlug: organization.slug,
+            userEmail: session.user.email
+        }).catch(() => [])
+        : [];
     const totalFiles = workspaces.reduce((count, workspace) => count + workspace.fileCount, 0);
     const totalUpdates = workspaces.reduce((count, workspace) => count + workspace.updateCount, 0);
     const totalTasks = workspaces.reduce((count, workspace) => count + workspace.taskCount, 0);
@@ -133,6 +141,22 @@ export default async function OrganizationSettingsPage({ searchParams }) {
 
                   <div className="mt-6">
                     <OrganizationBillingManager organizationSlug={organization.slug} initialBillingStatus={billingStatus}/>
+                  </div>
+                </div>
+
+                <div className="glass-panel rounded-[2rem] p-7">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="section-kicker">Developer access</p>
+                      <h2 className="mt-2 text-3xl font-semibold text-neutral">Internal API keys</h2>
+                      <p className="mt-3 max-w-2xl text-sm leading-7 text-base-content/68">
+                        Create private keys for integrating this organization with external admin apps. Keys are tenant-bound and can be revoked anytime.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <IntegrationApiKeyManager organization={organization} initialKeys={integrationKeys}/>
                   </div>
                 </div>
 
