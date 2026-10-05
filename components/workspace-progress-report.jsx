@@ -1,5 +1,6 @@
 "use client";
-import { useState, useTransition } from "react";
+import { ReportVersions } from "@/components/report-versions";
+import { useState } from "react";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 import { trackDatafastGoal } from "@/lib/client-analytics";
@@ -13,15 +14,23 @@ function ReportSection({ title, items, emptyLabel }) {
         </ul>) : (<p className="mt-3 text-sm leading-6 text-base-content/60">{emptyLabel}</p>)}
     </div>);
 }
-export function WorkspaceProgressReportView({ workspace, isAuthenticated, templates }) {
+export function WorkspaceProgressReportView({ workspace, isAuthenticated, templates, initialReport = null }) {
     const [selectedTemplateId, setSelectedTemplateId] = useState(templates[0]?.id ?? "default-progress");
-    const [report, setReport] = useState(null);
+    const today = new Date().toISOString().slice(0, 10);
+    const [periodStart, setPeriodStart] = useState(`${today.slice(0, 7)}-01`);
+    const [periodEnd, setPeriodEnd] = useState(today);
+    const [reportDate, setReportDate] = useState(today);
+    const [report, setReport] = useState(initialReport);
     const [missingQuestions, setMissingQuestions] = useState([]);
     const [clarificationAnswers, setClarificationAnswers] = useState({});
     const [recordingQuestionId, setRecordingQuestionId] = useState(null);
     const [error, setError] = useState(null);
     const [statusMessage, setStatusMessage] = useState(null);
-    const [isPending, startTransition] = useTransition();
+    const [isPending, setIsPending] = useState(false);
+    function startTransition(callback) {
+        setIsPending(true);
+        Promise.resolve().then(callback).finally(() => setIsPending(false));
+    }
     const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? templates[0];
     const handleOpenHtml = () => {
         if (!report?.html) {
@@ -60,7 +69,7 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
                     body: JSON.stringify({
                         workspaceSlug: workspace.slug,
                         templateId: selectedTemplateId,
-                        clarificationAnswers: answers
+                        clarificationAnswers: answers, periodStart, periodEnd, reportDate
                     })
                 });
                 const result = await readResponsePayload(response);
@@ -213,6 +222,7 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
       </div>);
     };
     return (<div className="space-y-6">
+      <ReportVersions workspaceSlug={workspace.slug} report={report} onSelect={value => { setSelectedTemplateId(value.templateId); setReport(value); }} />
       <div className="glass-panel rounded-[2rem] p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -250,6 +260,7 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
           </div>
         </div>
 
+        <div className="mt-6 grid gap-3 sm:grid-cols-3"><label className="text-sm">Period start<input className="input input-bordered mt-2 w-full" type="date" value={periodStart} max={periodEnd} onChange={event => setPeriodStart(event.target.value)} /></label><label className="text-sm">Period end<input className="input input-bordered mt-2 w-full" type="date" value={periodEnd} min={periodStart} onChange={event => setPeriodEnd(event.target.value)} /></label><label className="text-sm">Report date<input className="input input-bordered mt-2 w-full" type="date" value={reportDate} onChange={event => setReportDate(event.target.value)} /></label></div><p className="mt-2 text-xs text-base-content/60">Evidence dates use UTC calendar days. Missing details are marked in the draft.</p>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <button type="button" className="btn btn-primary" onClick={() => handleGenerate()} disabled={!isAuthenticated || isPending}>
             {isPending ? "Generating..." : "Generate report"}
@@ -322,7 +333,7 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
               <div className="text-sm text-base-content/60">This is the formatted HTML version generated from the current project progress.</div>
             </div>
             <div className="overflow-hidden rounded-[1.5rem] border border-base-300 bg-white">
-              <iframe title="Workspace progress report HTML preview" srcDoc={report.html} className="h-[900px] w-full bg-white"/>
+              <iframe title="Workspace progress report HTML preview" sandbox="" srcDoc={report.html} className="h-[900px] w-full bg-white"/>
             </div>
           </div>
         </>) : null}

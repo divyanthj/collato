@@ -1,6 +1,7 @@
+import { textModelOptions } from "@/lib/ai-models";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { getAuthorizedWorkspace, getWorkspaceChatContext, saveWorkspaceChatMessage } from "@/lib/data";
+import { getAuthorizedWorkspace, getWorkspaceDetailData, getWorkspaceChatHistory, getWorkspaceChatContext, saveWorkspaceChatMessage } from "@/lib/data";
 import { openai } from "@/lib/openai";
 import { getDisplayNameFromEmail } from "@/lib/user-display-name";
 function buildFallbackFollowUps(question) {
@@ -31,7 +32,7 @@ export const POST = auth(async (request) => {
     }
     const encoder = new TextEncoder();
     const stream = await openai.responses.create({
-        model: "gpt-5.2",
+        ...textModelOptions(),
         stream: true,
         input: [
             {
@@ -125,4 +126,12 @@ ${question}`
             Connection: "keep-alive"
         }
     });
+});
+
+export const GET = auth(async request => {
+  const email = request.auth?.user?.email;
+  if (!email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const data = await getWorkspaceDetailData(new URL(request.url).searchParams.get("workspaceSlug") || "", email);
+  if (!data) return NextResponse.json({ error: "Workspace unavailable" }, { status: 403 });
+  return NextResponse.json({ messages: await getWorkspaceChatHistory(data.workspace.slug, email) });
 });

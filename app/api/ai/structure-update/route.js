@@ -1,3 +1,4 @@
+import { textModelOptions } from "@/lib/ai-models";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { openai } from "@/lib/openai";
@@ -13,7 +14,7 @@ export const POST = auth(async (request) => {
         return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     const response = await openai.responses.create({
-        model: "gpt-5.2",
+        ...textModelOptions(),
         input: [
             {
                 role: "system",

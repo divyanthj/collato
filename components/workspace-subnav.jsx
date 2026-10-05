@@ -1,37 +1,12 @@
+import { AskCollatoPanel } from "@/components/ask-collato-panel";
 import Link from "next/link";
 import { ClientEventTracker } from "@/components/client-event-tracker";
 
 const WORKSPACE_TABS = [
-  {
-    id: "hub",
-    label: "Hub",
-    href: (workspaceSlug) => `/dashboard/${workspaceSlug}`
-  },
-  {
-    id: "knowledge",
-    label: "Knowledge",
-    href: (workspaceSlug) => `/dashboard/${workspaceSlug}/knowledge`
-  },
-  {
-    id: "updates",
-    label: "Updates",
-    href: (workspaceSlug) => `/dashboard/${workspaceSlug}/updates`
-  },
-  {
-    id: "chat",
-    label: "Ask workspace",
-    href: (workspaceSlug) => `/dashboard/${workspaceSlug}/chat`
-  },
-  {
-    id: "tasks",
-    label: "Tasks",
-    href: (workspaceSlug) => `/dashboard/${workspaceSlug}/tasks`
-  },
-  {
-    id: "report",
-    label: "Report",
-    href: (workspaceSlug) => `/dashboard/${workspaceSlug}/report`
-  }
+  { id: "hub", label: "Overview", href: slug => `/dashboard/${slug}` },
+  { id: "evidence", label: "Evidence", href: slug => `/dashboard/${slug}/evidence` },
+  { id: "tasks", label: "Tasks", href: slug => `/dashboard/${slug}/tasks` },
+  { id: "report", label: "Reports", href: slug => `/dashboard/${slug}/report` }
 ];
 
 export function WorkspaceSubnav({ workspaceSlug, activeTab }) {
@@ -42,7 +17,7 @@ export function WorkspaceSubnav({ workspaceSlug, activeTab }) {
   return (
     <div className="mt-5 max-w-full overflow-x-auto pb-1">
       <ClientEventTracker key={`${workspaceSlug}:${activeTab}`} goalName="workspace_section_viewed" metadata={{ section: activeTab }} />
-      <div role="tablist" className="tabs tabs-boxed w-max rounded-[1rem] border border-base-300 bg-base-100/90 p-1">
+      <div className="flex flex-wrap items-center gap-3"><AskCollatoPanel workspaceSlug={workspaceSlug} /><div role="tablist" className="tabs tabs-boxed w-max rounded-[1rem] border border-base-300 bg-base-100/90 p-1">
         {WORKSPACE_TABS.map((tab) => {
           const isActive = tab.id === activeTab;
           return (
@@ -61,7 +36,7 @@ export function WorkspaceSubnav({ workspaceSlug, activeTab }) {
             </Link>
           );
         })}
-      </div>
+      </div></div>
     </div>
   );
 }

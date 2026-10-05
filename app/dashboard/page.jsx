@@ -230,23 +230,19 @@ export default async function WorkspacePage({ searchParams }) {
                     </p>
                     <div className="mt-5 flex flex-wrap gap-3">
                       {accessGate?.requiresCheckout ? (<>
-                          <span className="btn btn-disabled btn-sm">Open hub</span>
+                          <span className="btn btn-disabled btn-sm">Overview</span>
                           <span className="btn btn-disabled btn-sm">Knowledge</span>
                           <span className="btn btn-disabled btn-sm">Updates</span>
-                          <span className="btn btn-disabled btn-sm">Ask workspace</span>
+                          <span className="btn btn-disabled btn-sm">Ask Collato</span>
                           <span className="btn btn-disabled btn-sm">Tasks</span>
                         </>) : (<>
                           <Link href={`/dashboard/${workspace.slug}`} className="btn btn-primary btn-sm">
-                            Open hub
+                            Overview
                           </Link>
-                          <Link href={`/dashboard/${workspace.slug}/knowledge`} className="btn btn-outline btn-sm">
-                            Knowledge
-                          </Link>
-                          <Link href={`/dashboard/${workspace.slug}/updates`} className="btn btn-outline btn-sm">
-                            Updates
-                          </Link>
+                          <Link href={`/dashboard/${workspace.slug}/evidence`} className="btn btn-outline btn-sm">Evidence</Link>
+                          <Link href={`/dashboard/${workspace.slug}/report`} className="btn btn-outline btn-sm">Reports</Link>
                           <Link href={`/dashboard/${workspace.slug}/chat`} className="btn btn-outline btn-sm">
-                            Ask workspace
+                            Ask Collato
                           </Link>
                           <Link href={`/dashboard/${workspace.slug}/tasks`} className="btn btn-outline btn-sm">
                             Tasks
