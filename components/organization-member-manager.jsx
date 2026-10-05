@@ -3,6 +3,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
+import { trackDatafastGoal } from "@/lib/client-analytics";
 export function OrganizationMemberManager({ organization, canManageMembers, organizationRole }) {
     const router = useRouter();
     const [memberEmail, setMemberEmail] = useState("");
@@ -35,10 +36,13 @@ export function OrganizationMemberManager({ organization, canManageMembers, orga
                     throw new Error(result.error ?? "Could not add organization member");
                 }
                 setMemberEmail("");
+                trackDatafastGoal("member_invited", { scope: "organization", role: memberRole });
+                if (result.inviteEmailWarning) trackDatafastGoal("invite_delivery_failed", { scope: "organization", stage: "invite" });
                 setMemberRole("member");
                 router.refresh();
             }
             catch (addError) {
+                trackDatafastGoal("invite_action_failed", { scope: "organization", action: "create", stage: "invite" });
                 setError(addError instanceof Error ? addError.message : "Could not add organization member");
             }
         });
@@ -62,9 +66,11 @@ export function OrganizationMemberManager({ organization, canManageMembers, orga
                 if (!response.ok) {
                     throw new Error(result.error ?? "Could not remove organization member");
                 }
+                trackDatafastGoal("member_removed", { scope: "organization" });
                 router.refresh();
             }
             catch (removeError) {
+                trackDatafastGoal("member_action_failed", { scope: "organization", action: "remove" });
                 setError(removeError instanceof Error ? removeError.message : "Could not remove organization member");
             }
         });

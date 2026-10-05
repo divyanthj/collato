@@ -106,6 +106,7 @@ export function KnowledgeBaseManager({
         link.href = url;
         link.download = `workspace-knowledge.${format}`;
         link.click();
+        trackDatafastGoal("knowledge_export_requested", { source: "knowledge_hub", format, item_count: exportRows.length });
         URL.revokeObjectURL(url);
     };
     const handleFileChange = async (file) => {
@@ -187,8 +188,9 @@ export function KnowledgeBaseManager({
                     const noteResult = await saveKnowledgeNote();
                     if (noteResult?.file) {
                         savedEntries.push(noteResult.file);
+                        trackDatafastGoal("knowledge_note_added", { source: "knowledge_hub", input_method: isVoiceUsed ? "voice" : "typed" });
                     }
-                    if (relevantFiles.length === 0) {
+                    if (noteResult?.file && relevantFiles.length === 0) {
                         trackDatafastGoal("first_knowledge_item_added", {
                             workspace_slug: selectedWorkspace.slug,
                             source: isVoiceUsed ? "voice_note" : "typed_note"
@@ -209,6 +211,7 @@ export function KnowledgeBaseManager({
                 setSummaryMessage(latestSummary ? "Workspace brief refreshed from the latest knowledge capture." : null);
             }
             catch (saveError) {
+                trackDatafastGoal("knowledge_capture_failed", { source: "knowledge_hub", stage: "save" });
                 setError(saveError instanceof Error ? saveError.message : "Could not save knowledge");
             }
         });
@@ -235,6 +238,7 @@ export function KnowledgeBaseManager({
                     throw new Error(result.error ?? "Could not generate workspace summary");
                 }
                 setGeneratedSummary(result);
+                trackDatafastGoal("knowledge_summary_result", { source: "knowledge_hub", status: result.status || "ready" });
                 setSummaryMessage(result.status === "insufficient_context"
                     ? "There is not enough extracted file content yet. Re-upload supported text files or add stronger notes."
                     : result.status === "partial_context"
@@ -242,6 +246,7 @@ export function KnowledgeBaseManager({
                         : "Workspace summary generated from the uploaded knowledge.");
             }
             catch (summaryError) {
+                trackDatafastGoal("knowledge_summary_failed", { source: "knowledge_hub", stage: "summary" });
                 setError(summaryError instanceof Error ? summaryError.message : "Could not generate workspace summary");
             }
         });
@@ -275,9 +280,11 @@ export function KnowledgeBaseManager({
                     [actionKey]: true
                 }));
                 setSummaryMessage("Task created from suggested next step.");
+                trackDatafastGoal("task_created", { source: "knowledge_suggestion" });
                 router.refresh();
             }
             catch (taskError) {
+                trackDatafastGoal("task_action_failed", { source: "knowledge_suggestion", action: "create" });
                 setError(taskError instanceof Error ? taskError.message : "Could not create task");
             }
             finally {
@@ -308,6 +315,7 @@ export function KnowledgeBaseManager({
                     throw new Error(result.error ?? "Could not update AI privacy");
                 }
                 setSavedFiles((current) => current.map((item) => item.id === result.id ? result : item));
+                trackDatafastGoal("ai_privacy_changed", { scope: "file", ai_private: nextValue ? "yes" : "no" });
                 setGeneratedSummary(null);
                 setSummaryMessage(nextValue
                     ? "This item is now excluded from AI context."
@@ -555,7 +563,7 @@ export function KnowledgeBaseManager({
                 </div>
                 {file.extractionSummary ? <p className="mt-3 text-xs uppercase tracking-[0.18em] text-primary/60">{file.extractionSummary}</p> : null}
                 {file.blobUrl ? <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-                    <a className="link link-primary" href={`/api/workspace-files/${file.id}/download`} target="_blank" rel="noreferrer">
+                    <a className="link link-primary" href={`/api/workspace-files/${file.id}/download`} onClick={() => trackDatafastGoal("knowledge_file_download_requested", { source: "knowledge_hub", file_type: file.fileType })} target="_blank" rel="noreferrer">
                       Open original file
                     </a>
                     <span className="text-base-content/55">

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
+import { trackDatafastGoal } from "@/lib/client-analytics";
 export function WorkspaceMemberManager({ workspace, canManageMembers, organizationMembers }) {
     const router = useRouter();
     const [selectedMemberEmail, setSelectedMemberEmail] = useState("");
@@ -49,9 +50,12 @@ export function WorkspaceMemberManager({ workspace, canManageMembers, organizati
                 if (!response.ok) {
                     throw new Error(result.error ?? "Could not add member");
                 }
+                trackDatafastGoal("member_invited", { scope: "workspace", role: "member" });
+                if (result.inviteEmailWarning) trackDatafastGoal("invite_delivery_failed", { scope: "workspace", stage: "invite" });
                 router.refresh();
             }
             catch (addError) {
+                trackDatafastGoal("invite_action_failed", { scope: "workspace", action: "create", stage: "invite" });
                 setError(addError instanceof Error ? addError.message : "Could not add member");
             }
         });
@@ -74,9 +78,11 @@ export function WorkspaceMemberManager({ workspace, canManageMembers, organizati
                 if (!response.ok) {
                     throw new Error(result.error ?? "Could not remove member");
                 }
+                trackDatafastGoal("member_removed", { scope: "workspace" });
                 router.refresh();
             }
             catch (removeError) {
+                trackDatafastGoal("member_action_failed", { scope: "workspace", action: "remove" });
                 setError(removeError instanceof Error ? removeError.message : "Could not remove member");
             }
         });

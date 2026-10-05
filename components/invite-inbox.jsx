@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
+import { trackDatafastGoal } from "@/lib/client-analytics";
 
 export function InviteInbox({
   organizationInvites = [],
@@ -55,8 +56,10 @@ export function InviteInbox({
         }
 
         setSuccessMessage(result.message ?? (actionLabel === "accept" ? "Invite accepted." : "Invite declined."));
+        trackDatafastGoal(actionLabel === "accept" ? "invite_accepted" : "invite_declined", { scope: type === "organization" ? "organization" : "workspace" });
         router.refresh();
       } catch (inviteError) {
+        trackDatafastGoal("invite_action_failed", { scope: type === "organization" ? "organization" : "workspace", action: actionLabel, stage: "invite" });
         setError(inviteError instanceof Error ? inviteError.message : `Could not ${actionLabel} invite`);
       } finally {
         setPendingKey("");

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import { createLemonCheckoutUrl, getBillingStatusForOrganization, resolveOrganizationForUser } from "@/lib/billing";
 
@@ -72,12 +73,15 @@ export async function POST(request) {
   }
 
   try {
+    const cookieStore = cookies();
     const url = await createLemonCheckoutUrl({
       userEmail: sessionEmail,
       interval,
       quantity,
       organizationSlug: organization?.slug ?? "",
       mode,
+      datafastVisitorId: cookieStore.get("datafast_visitor_id")?.value,
+      datafastSessionId: cookieStore.get("datafast_session_id")?.value,
       redirectUrl: safeRedirectTo ? `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}${safeRedirectTo}` : ""
     });
     return NextResponse.json({ url, sessionUserEmail: sessionEmail }, { status: 200 });

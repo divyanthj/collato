@@ -1,7 +1,7 @@
 import Link from "next/link";
 import appConfig from "@/config/app";
 
-const effectiveDate = "April 13, 2026";
+const effectiveDate = "October 5, 2026";
 const legalEntity = "SimplySolved tech";
 const contactEmail = appConfig?.resend?.replyTo || "support@collato.io";
 
@@ -29,7 +29,7 @@ const sections = [
   {
     title: "Cookies and Similar Technologies",
     body:
-      "We use cookies and similar technologies for login sessions, security, and core product functionality. Additional analytics usage may be added over time with updates to this policy.",
+      "We use cookies and similar technologies for login sessions, security, and core product functionality. We use DataFast to measure website visits and product interactions using visitor and session identifiers. Where available, these identifiers are passed to our billing provider to support checkout attribution. Custom product-event properties use categories and counts rather than names, email addresses, or workspace content.",
   },
   {
     title: "Data Retention",

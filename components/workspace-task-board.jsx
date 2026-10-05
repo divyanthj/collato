@@ -2,6 +2,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
+import { trackDatafastGoal } from "@/lib/client-analytics";
 const TASK_COLUMNS = [
     { status: "open", label: "Open" },
     { status: "in_progress", label: "In progress" },
@@ -58,6 +59,7 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
                     throw new Error(result.error ?? "Could not create task");
                 }
                 setTasks((current) => [result, ...current]);
+                trackDatafastGoal("task_created", { source: suggestionId ? "update_suggestion" : "task_board", has_assignee: payload.assigneeEmail ? "yes" : "no", has_due_date: payload.dueDate ? "yes" : "no" });
                 setStatusMessage("Task created successfully.");
                 setTitle("");
                 setDescription("");
@@ -73,6 +75,7 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
                 }
             }
             catch (taskError) {
+                trackDatafastGoal("task_action_failed", { source: "task_board", action: "create" });
                 setError(taskError instanceof Error ? taskError.message : "Could not create task");
             }
         });
@@ -101,6 +104,7 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
         setSelectedSuggestionId(suggestion.id);
     };
     const handleTaskPatch = (taskId, updates) => {
+        const previousTask = tasks.find((task) => task.id === taskId);
         setError(null);
         setStatusMessage(null);
         startTransition(async () => {
@@ -120,8 +124,12 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
                     throw new Error(result.error ?? "Could not update task");
                 }
                 setTasks((current) => current.map((task) => (task.id === taskId ? result : task)));
+                const field = updates.status !== undefined ? "status" : updates.assigneeEmail !== undefined ? "assignee" : "due_date";
+                trackDatafastGoal("task_updated", { source: "task_board", field, status: result.status });
+                if (result.status === "done" && previousTask?.status !== "done") trackDatafastGoal("task_completed", { source: "task_board" });
             }
             catch (taskError) {
+                trackDatafastGoal("task_action_failed", { source: "task_board", action: "update" });
                 setError(taskError instanceof Error ? taskError.message : "Could not update task");
             }
         });
@@ -159,8 +167,11 @@ export function WorkspaceTaskBoard({ workspace, initialTasks, suggestedTasks, cu
                     throw new Error(result.error ?? "Could not update task");
                 }
                 setTasks((current) => current.map((task) => (task.id === taskId ? result : task)));
+                trackDatafastGoal("task_updated", { source: "task_board", field: "status", status: result.status });
+                if (result.status === "done" && taskToMove.status !== "done") trackDatafastGoal("task_completed", { source: "task_board" });
             }
             catch (taskError) {
+                trackDatafastGoal("task_action_failed", { source: "task_board", action: "update" });
                 setTasks((current) => current.map((task) => task.id === taskId
                     ? {
                         ...task,

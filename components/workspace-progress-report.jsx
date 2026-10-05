@@ -1,8 +1,9 @@
 "use client";
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
 import { trackDatafastGoal } from "@/lib/client-analytics";
+import { validateWorkspaceReportResult } from "@/lib/client-report-validation";
 import { VoiceInputButton } from "@/components/voice-input-button";
 function ReportSection({ title, items, emptyLabel }) {
     return (<div className="rounded-[1.5rem] bg-base-100 p-5">
@@ -21,7 +22,6 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
     const [error, setError] = useState(null);
     const [statusMessage, setStatusMessage] = useState(null);
     const [isPending, startTransition] = useTransition();
-    const hasTrackedFirstReportRef = useRef(false);
     const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? templates[0];
     const handleOpenHtml = () => {
         if (!report?.html) {
@@ -30,6 +30,7 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
         const blob = new Blob([report.html], { type: "text/html;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         window.open(url, "_blank", "noopener,noreferrer");
+        trackDatafastGoal("report_preview_requested", { source: "report", template_id: selectedTemplateId, format: "html" });
         window.setTimeout(() => URL.revokeObjectURL(url), 60000);
     };
     const handleDownloadHtml = () => {
@@ -42,11 +43,13 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
         link.href = url;
         link.download = `${workspace.slug}-${selectedTemplateId}.html`;
         link.click();
+        trackDatafastGoal("report_export_requested", { source: "report", template_id: selectedTemplateId, format: "html" });
         URL.revokeObjectURL(url);
     };
     const handleGenerate = (answers = clarificationAnswers) => {
         setError(null);
         setStatusMessage(null);
+        trackDatafastGoal("report_generation_started", { source: "report", template_id: selectedTemplateId });
         startTransition(async () => {
             try {
                 const response = await fetch("/api/ai/workspace-report", {
@@ -64,7 +67,9 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
                 if (!response.ok) {
                     throw new Error("Could not generate report");
                 }
-                if (result.status === "needs_clarification") {
+                const reportStatus = validateWorkspaceReportResult(result, selectedTemplateId);
+                if (reportStatus === "needs_clarification") {
+                    trackDatafastGoal("report_clarification_required", { source: "report", template_id: selectedTemplateId, item_count: result.missingQuestions?.length ?? 0 });
                     setReport(null);
                     setMissingQuestions(result.missingQuestions);
                     setStatusMessage("A few details are still needed. Answer these questions and generate the report again.");
@@ -73,19 +78,13 @@ export function WorkspaceProgressReportView({ workspace, isAuthenticated, templa
                 setMissingQuestions([]);
                 setReport(result);
                 trackDatafastGoal("report_generated", {
-                    workspace_slug: workspace.slug,
+                    source: "report",
                     template_id: selectedTemplateId
                 });
-                if (!hasTrackedFirstReportRef.current) {
-                    hasTrackedFirstReportRef.current = true;
-                    trackDatafastGoal("first_report_generated", {
-                        workspace_slug: workspace.slug,
-                        template_id: selectedTemplateId
-                    });
-                }
                 setStatusMessage(`Report created using the ${selectedTemplate?.name ?? "selected"} format.`);
             }
             catch (reportError) {
+                trackDatafastGoal("report_generation_failed", { source: "report", stage: "generate", template_id: selectedTemplateId });
                 setError(reportError instanceof Error ? reportError.message : "Could not generate report");
             }
         });
