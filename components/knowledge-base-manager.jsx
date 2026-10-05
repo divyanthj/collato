@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
@@ -46,6 +46,18 @@ export function KnowledgeBaseManager({
     const [creatingTaskKey, setCreatingTaskKey] = useState(null);
     const [createdActionKeys, setCreatedActionKeys] = useState({});
     const [privacySavingFileId, setPrivacySavingFileId] = useState(null);
+    const [sharePointConnection, setSharePointConnection] = useState(null);
+    const [sharePointError, setSharePointError] = useState(null);
+    const [sharePointStatus, setSharePointStatus] = useState("");
+    const [sharePointSites, setSharePointSites] = useState([]);
+    const [sharePointDrives, setSharePointDrives] = useState([]);
+    const [sharePointItems, setSharePointItems] = useState([]);
+    const [selectedSharePointSite, setSelectedSharePointSite] = useState(null);
+    const [selectedSharePointDrive, setSelectedSharePointDrive] = useState(null);
+    const [sharePointFolderStack, setSharePointFolderStack] = useState([]);
+    const [selectedSharePointItems, setSelectedSharePointItems] = useState({});
+    const [isSharePointLoading, setIsSharePointLoading] = useState(false);
+    const [isSharePointImporting, setIsSharePointImporting] = useState(false);
     const selectedWorkspace = useMemo(() => workspaces.find((workspace) => workspace.slug === selectedWorkspaceSlug) ?? workspaces[0], [selectedWorkspaceSlug, workspaces]);
     const filteredFiles = useMemo(() => {
         const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -57,7 +69,7 @@ export function KnowledgeBaseManager({
             if (!normalizedQuery) {
                 return true;
             }
-            return [file.fileName, file.fileType, file.knowledgeText, file.uploadedBy]
+            return [file.fileName, file.fileType, file.knowledgeText, file.uploadedBy, file.externalProvider, file.externalAccountEmail, file.externalPath]
                 .join(" ")
                 .toLowerCase()
                 .includes(normalizedQuery);
@@ -84,6 +96,47 @@ export function KnowledgeBaseManager({
         };
     }, [knowledgeSummary, relevantFiles]);
     const displayedSummary = generatedSummary ?? liveKnowledgeSummary;
+    const selectedSharePointCount = useMemo(() => Object.values(selectedSharePointItems).filter(Boolean).length, [selectedSharePointItems]);
+    useEffect(() => {
+        let isCurrent = true;
+        setSharePointConnection(null);
+        setSharePointError(null);
+        setSharePointStatus("");
+        setSharePointSites([]);
+        setSharePointDrives([]);
+        setSharePointItems([]);
+        setSelectedSharePointSite(null);
+        setSelectedSharePointDrive(null);
+        setSharePointFolderStack([]);
+        setSelectedSharePointItems({});
+        if (!isAuthenticated || !selectedWorkspace) {
+            return () => {
+                isCurrent = false;
+            };
+        }
+        const loadConnection = async () => {
+            try {
+                const response = await fetch(`/api/integrations/sharepoint/connection?workspaceSlug=${encodeURIComponent(selectedWorkspace.slug)}`);
+                const result = await readResponsePayload(response);
+                if (!isCurrent) {
+                    return;
+                }
+                if (!response.ok) {
+                    throw new Error(result.error ?? "Could not check SharePoint connection");
+                }
+                setSharePointConnection(result.connection ?? null);
+            }
+            catch (connectionError) {
+                if (isCurrent) {
+                    setSharePointError(connectionError instanceof Error ? connectionError.message : "Could not check SharePoint connection");
+                }
+            }
+        };
+        void loadConnection();
+        return () => {
+            isCurrent = false;
+        };
+    }, [isAuthenticated, selectedWorkspace]);
     const handleExport = (format) => {
         const exportRows = filteredFiles.map((file) => ({
             fileName: file.fileName,
@@ -111,6 +164,191 @@ export function KnowledgeBaseManager({
     };
     const handleFileChange = async (file) => {
         setSelectedFile(file);
+    };
+    const handleConnectSharePoint = () => {
+        if (!selectedWorkspace) {
+            return;
+        }
+        trackDatafastGoal("integration_connect_started", { integration: "sharepoint", source: "knowledge_hub" });
+        window.location.href = `/api/integrations/sharepoint/connect?workspaceSlug=${encodeURIComponent(selectedWorkspace.slug)}`;
+    };
+    const handleDisconnectSharePoint = async () => {
+        if (!selectedWorkspace) {
+            return;
+        }
+        setSharePointError(null);
+        setSharePointStatus("");
+        setIsSharePointLoading(true);
+        try {
+            const response = await fetch("/api/integrations/sharepoint/connection", {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    workspaceSlug: selectedWorkspace.slug
+                })
+            });
+            const result = await readResponsePayload(response);
+            if (!response.ok) {
+                throw new Error(result.error ?? "Could not disconnect SharePoint");
+            }
+            setSharePointConnection(null);
+            setSharePointSites([]);
+            setSharePointDrives([]);
+            setSharePointItems([]);
+            setSelectedSharePointSite(null);
+            setSelectedSharePointDrive(null);
+            setSharePointFolderStack([]);
+            setSelectedSharePointItems({});
+            setSharePointStatus("SharePoint disconnected. Imported files remain available in this workspace.");
+            trackDatafastGoal("integration_disconnected", { integration: "sharepoint" });
+        }
+        catch (disconnectError) {
+            trackDatafastGoal("integration_action_failed", { integration: "sharepoint", stage: "disconnect" });
+            setSharePointError(disconnectError instanceof Error ? disconnectError.message : "Could not disconnect SharePoint");
+        }
+        finally {
+            setIsSharePointLoading(false);
+        }
+    };
+    const loadSharePointSites = async () => {
+        if (!selectedWorkspace) {
+            return;
+        }
+        setSharePointError(null);
+        setSharePointStatus("");
+        setIsSharePointLoading(true);
+        try {
+            const response = await fetch(`/api/integrations/sharepoint/sites?workspaceSlug=${encodeURIComponent(selectedWorkspace.slug)}`);
+            const result = await readResponsePayload(response);
+            if (!response.ok) {
+                throw new Error(result.error ?? "Could not load SharePoint sites");
+            }
+            setSharePointSites(result.sites ?? []);
+            setSharePointStatus((result.sites ?? []).length > 0 ? "Choose a site to browse libraries." : "No SharePoint sites were returned for this Microsoft account.");
+        }
+        catch (sitesError) {
+            setSharePointError(sitesError instanceof Error ? sitesError.message : "Could not load SharePoint sites");
+        }
+        finally {
+            setIsSharePointLoading(false);
+        }
+    };
+    const loadSharePointDrives = async (site) => {
+        if (!selectedWorkspace || !site) {
+            return;
+        }
+        setSharePointError(null);
+        setSharePointStatus("");
+        setIsSharePointLoading(true);
+        setSelectedSharePointSite(site);
+        setSelectedSharePointDrive(null);
+        setSharePointItems([]);
+        setSharePointFolderStack([]);
+        setSelectedSharePointItems({});
+        try {
+            const response = await fetch(`/api/integrations/sharepoint/drives?workspaceSlug=${encodeURIComponent(selectedWorkspace.slug)}&siteId=${encodeURIComponent(site.id)}`);
+            const result = await readResponsePayload(response);
+            if (!response.ok) {
+                throw new Error(result.error ?? "Could not load SharePoint libraries");
+            }
+            setSharePointDrives(result.drives ?? []);
+            setSharePointStatus((result.drives ?? []).length > 0 ? "Choose a document library." : "No document libraries were returned for this site.");
+        }
+        catch (drivesError) {
+            setSharePointError(drivesError instanceof Error ? drivesError.message : "Could not load SharePoint libraries");
+        }
+        finally {
+            setIsSharePointLoading(false);
+        }
+    };
+    const loadSharePointItems = async ({ drive, itemId = "", nextStack = [] }) => {
+        if (!selectedWorkspace || !drive) {
+            return;
+        }
+        setSharePointError(null);
+        setSharePointStatus("");
+        setIsSharePointLoading(true);
+        setSelectedSharePointDrive(drive);
+        setSharePointFolderStack(nextStack);
+        setSelectedSharePointItems({});
+        try {
+            const params = new URLSearchParams({
+                workspaceSlug: selectedWorkspace.slug,
+                driveId: drive.id
+            });
+            if (itemId) {
+                params.set("itemId", itemId);
+            }
+            const response = await fetch(`/api/integrations/sharepoint/items?${params.toString()}`);
+            const result = await readResponsePayload(response);
+            if (!response.ok) {
+                throw new Error(result.error ?? "Could not load SharePoint files");
+            }
+            setSharePointItems(result.items ?? []);
+            setSharePointStatus((result.items ?? []).length > 0 ? "Select files to import into this workspace." : "This folder is empty.");
+        }
+        catch (itemsError) {
+            setSharePointError(itemsError instanceof Error ? itemsError.message : "Could not load SharePoint files");
+        }
+        finally {
+            setIsSharePointLoading(false);
+        }
+    };
+    const handleImportSharePointItems = async () => {
+        if (!selectedWorkspace || !selectedSharePointDrive) {
+            return;
+        }
+        const itemsToImport = Object.values(selectedSharePointItems).filter(Boolean);
+        if (itemsToImport.length === 0) {
+            return;
+        }
+        setSharePointError(null);
+        setSharePointStatus("");
+        setIsSharePointImporting(true);
+        try {
+            const response = await fetch("/api/integrations/sharepoint/import", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    workspaceSlug: selectedWorkspace.slug,
+                    siteId: selectedSharePointSite?.id ?? "",
+                    siteName: selectedSharePointSite?.displayName ?? selectedSharePointSite?.name ?? "",
+                    driveId: selectedSharePointDrive.id,
+                    driveName: selectedSharePointDrive.name,
+                    items: itemsToImport.map((item) => ({
+                        id: item.id,
+                        name: item.name
+                    }))
+                })
+            });
+            const result = await readResponsePayload(response);
+            if (!response.ok && !result.imported?.length) {
+                throw new Error(result.error ?? "Could not import SharePoint files");
+            }
+            if (result.imported?.length) {
+                setSavedFiles((current) => [...result.imported, ...current].slice(0, 8));
+                setGeneratedSummary(result.knowledgeSummary ?? null);
+                trackDatafastGoal("knowledge_file_added", {
+                    item_count: result.imported.length,
+                    file_type: "sharepoint",
+                    input_method: "sharepoint_import"
+                });
+            }
+            trackDatafastGoal("integration_import_completed", { integration: "sharepoint", item_count: result.imported?.length ?? 0, failed_count: result.failed?.length ?? 0 });
+            setSelectedSharePointItems({});
+            setSharePointStatus(`${result.imported?.length ?? 0} SharePoint file${result.imported?.length === 1 ? "" : "s"} imported.${result.failed?.length ? ` ${result.failed.length} failed.` : ""}`);
+        }
+        catch (importError) {
+            trackDatafastGoal("integration_action_failed", { integration: "sharepoint", stage: "import" });
+            setSharePointError(importError instanceof Error ? importError.message : "Could not import SharePoint files");
+        }
+        finally {
+            setIsSharePointImporting(false);
+        }
     };
     const handlePasteScreenshot = (event) => {
         if (!isAuthenticated) {
@@ -390,6 +628,110 @@ export function KnowledgeBaseManager({
             </div>
           </div>
 
+          <div className="collapse collapse-arrow rounded-[1.2rem] border border-base-300 bg-base-100">
+            <input type="checkbox"/>
+            <div className="collapse-title text-sm font-semibold text-neutral">
+              Import from SharePoint
+            </div>
+            <div className="collapse-content space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-base-300 bg-base-200/50 p-4">
+                <div>
+                  <div className="text-sm font-semibold text-neutral">
+                    {sharePointConnection ? "SharePoint connected" : "SharePoint not connected"}
+                  </div>
+                  <div className="mt-1 text-sm text-base-content/60">
+                    {sharePointConnection
+            ? `Connected as ${sharePointConnection.microsoftDisplayName || sharePointConnection.microsoftAccountEmail || "Microsoft account"}`
+            : "Connect Microsoft to browse SharePoint files without changing your Collato sign-in."}
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {sharePointConnection ? (<button type="button" className="btn btn-outline btn-sm" onClick={handleDisconnectSharePoint} disabled={isSharePointLoading || isSharePointImporting}>
+                      Disconnect
+                    </button>) : null}
+                  <button type="button" className="btn btn-primary btn-sm" onClick={sharePointConnection ? loadSharePointSites : handleConnectSharePoint} disabled={!isAuthenticated || !selectedWorkspace || isSharePointLoading || isSharePointImporting}>
+                    {sharePointConnection ? "Browse SharePoint" : "Connect SharePoint"}
+                  </button>
+                </div>
+              </div>
+
+              {sharePointError ? <AlertBanner tone="error">{sharePointError}</AlertBanner> : null}
+              {sharePointStatus ? (<div className="alert alert-info text-sm">
+                  <span>{sharePointStatus}</span>
+                </div>) : null}
+
+              {sharePointSites.length > 0 ? (<div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-base-content/55">Sites</div>
+                  <div className="mt-2 grid gap-2">
+                    {sharePointSites.map((site) => (<button key={site.id} type="button" className={`btn justify-start text-left ${selectedSharePointSite?.id === site.id ? "btn-primary" : "btn-outline"}`} onClick={() => loadSharePointDrives(site)} disabled={isSharePointLoading || isSharePointImporting}>
+                        {site.displayName || site.name}
+                      </button>))}
+                  </div>
+                </div>) : null}
+
+              {sharePointDrives.length > 0 ? (<div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-base-content/55">Libraries</div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {sharePointDrives.map((drive) => (<button key={drive.id} type="button" className={`btn justify-start text-left ${selectedSharePointDrive?.id === drive.id ? "btn-secondary" : "btn-outline"}`} onClick={() => loadSharePointItems({ drive })} disabled={isSharePointLoading || isSharePointImporting}>
+                        {drive.name}
+                      </button>))}
+                  </div>
+                </div>) : null}
+
+              {selectedSharePointDrive ? (<div className="rounded-2xl border border-base-300 bg-base-100 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-base-content/55">Files</div>
+                      <div className="mt-1 text-sm font-medium text-neutral">{selectedSharePointDrive.name}</div>
+                    </div>
+                    <button type="button" className="btn btn-primary btn-sm" onClick={handleImportSharePointItems} disabled={selectedSharePointCount === 0 || isSharePointImporting || isSharePointLoading}>
+                      {isSharePointImporting ? "Importing..." : `Import selected (${selectedSharePointCount})`}
+                    </button>
+                  </div>
+
+                  {sharePointFolderStack.length > 0 ? (<div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                      <button type="button" className="link link-primary" onClick={() => loadSharePointItems({ drive: selectedSharePointDrive })} disabled={isSharePointLoading || isSharePointImporting}>
+                        Root
+                      </button>
+                      {sharePointFolderStack.map((folder, index) => (<button key={folder.id} type="button" className="link link-primary" onClick={() => loadSharePointItems({
+                drive: selectedSharePointDrive,
+                itemId: folder.id,
+                nextStack: sharePointFolderStack.slice(0, index + 1)
+            })} disabled={isSharePointLoading || isSharePointImporting}>
+                          / {folder.name}
+                        </button>))}
+                    </div>) : null}
+
+                  <div className="mt-4 space-y-2">
+                    {sharePointItems.map((item) => (<div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-base-300 px-4 py-3 text-sm">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-neutral">{item.name}</div>
+                          <div className="text-xs text-base-content/55">
+                            {item.folder ? "Folder" : item.mimeType || "File"}{item.size ? ` | ${item.size} B` : ""}
+                          </div>
+                        </div>
+                        {item.folder ? (<button type="button" className="btn btn-outline btn-xs" onClick={() => loadSharePointItems({
+                    drive: selectedSharePointDrive,
+                    itemId: item.id,
+                    nextStack: [...sharePointFolderStack, { id: item.id, name: item.name }]
+                })} disabled={isSharePointLoading || isSharePointImporting}>
+                            Open
+                          </button>) : (<label className="label cursor-pointer gap-2 py-0">
+                            <span className="label-text text-xs">Import</span>
+                            <input type="checkbox" className="checkbox checkbox-sm" checked={Boolean(selectedSharePointItems[item.id])} onChange={(event) => setSelectedSharePointItems((current) => ({
+                    ...current,
+                    [item.id]: event.target.checked ? item : null
+                }))} disabled={isSharePointImporting || isSharePointLoading}/>
+                          </label>)}
+                      </div>))}
+                    {selectedSharePointDrive && sharePointItems.length === 0 ? (<div className="rounded-2xl border border-dashed border-base-300 p-5 text-center text-sm text-base-content/60">
+                        {isSharePointLoading ? "Loading SharePoint files..." : "No files shown yet."}
+                      </div>) : null}
+                  </div>
+                </div>) : null}
+            </div>
+          </div>
+
           <label className="form-control">
             <div className="label flex-wrap items-start">
               <div>
@@ -558,6 +900,7 @@ export function KnowledgeBaseManager({
                     {file.extractionStatus === "ai_extracted" ? <div className="badge badge-info badge-outline">AI extracted</div> : null}
                     {file.extractionStatus === "unsupported" ? <div className="badge badge-warning badge-outline">Notes only</div> : null}
                     {file.extractionStatus === "legacy" ? <div className="badge badge-outline">Legacy</div> : null}
+                    {file.externalProvider === "sharepoint" ? <div className="badge badge-info badge-outline">SharePoint</div> : null}
                     <div className="badge badge-outline">{new Date(file.createdAt).toLocaleDateString()}</div>
                   </div>
                 </div>
@@ -569,6 +912,9 @@ export function KnowledgeBaseManager({
                     <span className="text-base-content/55">
                       {file.blobAccess === "public" ? "Public blob" : "Private blob"}
                     </span>
+                    {file.externalWebUrl ? (<a className="link link-primary" href={file.externalWebUrl} target="_blank" rel="noreferrer">
+                        Open in SharePoint
+                      </a>) : null}
                   </div> : null}
                 <p className="mt-3 line-clamp-4 text-sm leading-6 text-base-content/75">{file.extractedText || file.manualNotes || file.knowledgeText || "No searchable text captured for this file yet."}</p>
               </div>))) : (<div className="rounded-[1.5rem] border border-dashed border-base-300 bg-base-100 p-8 text-center text-sm leading-7 text-base-content/60">

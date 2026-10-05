@@ -1,0 +1,343 @@
+{
+  "auditAt": "2026-10-05T06:14:14.894Z",
+  "collectionCounts": {
+    "workspace_knowledge_chunks": 233,
+    "auth_accounts": 11,
+    "organizations": 7,
+    "auth_verification_tokens": 4,
+    "billing_orders": 8,
+    "workspace_tasks": 11,
+    "workspace_files": 26,
+    "workspace_update_notifications": 19,
+    "auth_users": 20,
+    "billing_webhook_events": 105,
+    "workspace_chat_messages": 26,
+    "workspaces": 8,
+    "billing_subscriptions": 12,
+    "contact_submissions": 1,
+    "workspace_updates": 22
+  },
+  "userRecordQuality": {
+    "total": 20,
+    "withEmail": 15,
+    "distinctNonemptyEmails": 15,
+    "withoutEmail": 5
+  },
+  "excludedOrganizations": [
+    "Divyanth Jayaraj's Organization",
+    "Divyanth's Organization",
+    "Somethingsomething",
+    "Green Sketch Consultants"
+  ],
+  "externalOrganizations": [
+    {
+      "name": "By The Spoonful",
+      "slug": "by-the-spoonful",
+      "owner": "user-004",
+      "excluded": false,
+      "createdAt": "2026-04-07T13:10:11.056Z",
+      "members": [
+        {
+          "user": "user-004",
+          "role": "owner",
+          "status": "active",
+          "invitedAt": null,
+          "joinedAt": null
+        }
+      ]
+    },
+    {
+      "name": "Simply Solved's Organization",
+      "slug": "simply-solved-s-organization",
+      "owner": "user-005",
+      "excluded": false,
+      "createdAt": "2026-04-09T11:26:25.678Z",
+      "members": [
+        {
+          "user": "user-005",
+          "role": "owner",
+          "status": "active",
+          "invitedAt": null,
+          "joinedAt": null
+        }
+      ]
+    },
+    {
+      "name": "Good Gut Hut",
+      "slug": "good-gut-hut",
+      "owner": "user-013",
+      "excluded": false,
+      "createdAt": "2026-04-20T14:11:17.490Z",
+      "members": [
+        {
+          "user": "user-013",
+          "role": "owner",
+          "status": "active",
+          "invitedAt": null,
+          "joinedAt": "2026-04-20T14:11:17.490Z"
+        },
+        {
+          "user": "user-014",
+          "role": "admin",
+          "status": "active",
+          "invitedAt": "2026-05-01T05:08:48.296Z",
+          "joinedAt": "2026-05-01T05:12:40.003Z"
+        }
+      ]
+    }
+  ],
+  "externalActivity": {
+    "workspace_files": {
+      "total": 26,
+      "externalGroups": [
+        {
+          "organizationSlug": "by-the-spoonful",
+          "workspaceSlug": "zero-waste",
+          "user": "user-004",
+          "role": null,
+          "status": null,
+          "inputMethod": null,
+          "extractionStatus": "extracted",
+          "provider": null,
+          "excluded": false,
+          "count": 2,
+          "firstAt": "2026-04-07T13:27:36.148Z",
+          "lastAt": "2026-04-07T13:32:36.757Z",
+          "completedCount": 0
+        },
+        {
+          "organizationSlug": "good-gut-hut",
+          "workspaceSlug": "brand-language",
+          "user": "user-013",
+          "role": null,
+          "status": null,
+          "inputMethod": null,
+          "extractionStatus": "extracted",
+          "provider": null,
+          "excluded": false,
+          "count": 3,
+          "firstAt": "2026-04-20T14:14:59.604Z",
+          "lastAt": "2026-05-10T10:58:22.863Z",
+          "completedCount": 0
+        },
+        {
+          "organizationSlug": "good-gut-hut",
+          "workspaceSlug": "marketing-social-media-presence",
+          "user": "user-013",
+          "role": null,
+          "status": null,
+          "inputMethod": null,
+          "extractionStatus": "extracted",
+          "provider": null,
+          "excluded": false,
+          "count": 1,
+          "firstAt": "2026-04-26T17:40:41.216Z",
+          "lastAt": "2026-04-26T17:40:41.216Z",
+          "completedCount": 0
+        },
+        {
+          "organizationSlug": "good-gut-hut",
+          "workspaceSlug": "brand-language",
+          "user": "user-014",
+          "role": null,
+          "status": null,
+          "inputMethod": null,
+          "extractionStatus": "extracted",
+          "provider": null,
+          "excluded": false,
+          "count": 1,
+          "firstAt": "2026-05-01T05:14:56.242Z",
+          "lastAt": "2026-05-01T05:14:56.242Z",
+          "completedCount": 0
+        },
+        {
+          "organizationSlug": "good-gut-hut",
+          "workspaceSlug": "quality-control",
+          "user": "user-013",
+          "role": null,
+          "status": null,
+          "inputMethod": null,
+          "extractionStatus": "extracted",
+          "provider": null,
+          "excluded": false,
+          "count": 1,
+          "firstAt": "2026-05-02T17:17:12.665Z",
+          "lastAt": "2026-05-02T17:17:12.665Z",
+          "completedCount": 0
+        }
+      ]
+    },
+    "workspace_updates": {
+      "total": 22,
+      "externalGroups": []
+    },
+    "workspace_tasks": {
+      "total": 11,
+      "externalGroups": [
+        {
+          "organizationSlug": "good-gut-hut",
+          "workspaceSlug": "brand-language",
+          "user": "user-013",
+          "role": null,
+          "status": "open",
+          "inputMethod": null,
+          "extractionStatus": null,
+          "provider": null,
+          "excluded": false,
+          "count": 2,
+          "firstAt": "2026-04-27T04:02:48.235Z",
+          "lastAt": "2026-04-27T04:02:57.279Z",
+          "completedCount": 0
+        }
+      ]
+    },
+    "workspace_chat_messages": {
+      "total": 26,
+      "externalGroups": []
+    },
+    "workspace_knowledge_chunks": {
+      "total": 233,
+      "externalGroups": [
+        {
+          "organizationSlug": "by-the-spoonful",
+          "workspaceSlug": "zero-waste",
+          "user": "unknown",
+          "role": null,
+          "status": null,
+          "inputMethod": null,
+          "extractionStatus": null,
+          "provider": null,
+          "excluded": false,
+          "count": 4,
+          "firstAt": "2026-04-07T13:27:36.000Z",
+          "lastAt": "2026-04-07T13:32:36.000Z",
+          "completedCount": 0
+        },
+        {
+          "organizationSlug": "good-gut-hut",
+          "workspaceSlug": "brand-language",
+          "user": "unknown",
+          "role": null,
+          "status": null,
+          "inputMethod": null,
+          "extractionStatus": null,
+          "provider": null,
+          "excluded": false,
+          "count": 17,
+          "firstAt": "2026-04-20T14:14:59.000Z",
+          "lastAt": "2026-05-10T10:58:22.000Z",
+          "completedCount": 0
+        },
+        {
+          "organizationSlug": "good-gut-hut",
+          "workspaceSlug": "marketing-social-media-presence",
+          "user": "unknown",
+          "role": null,
+          "status": null,
+          "inputMethod": null,
+          "extractionStatus": null,
+          "provider": null,
+          "excluded": false,
+          "count": 1,
+          "firstAt": "2026-04-26T17:40:41.000Z",
+          "lastAt": "2026-04-26T17:40:41.000Z",
+          "completedCount": 0
+        },
+        {
+          "organizationSlug": "good-gut-hut",
+          "workspaceSlug": "quality-control",
+          "user": "unknown",
+          "role": null,
+          "status": null,
+          "inputMethod": null,
+          "extractionStatus": null,
+          "provider": null,
+          "excluded": false,
+          "count": 4,
+          "firstAt": "2026-05-02T17:17:12.000Z",
+          "lastAt": "2026-05-02T17:17:12.000Z",
+          "completedCount": 0
+        }
+      ]
+    },
+    "integration_connections": {
+      "total": 0,
+      "externalGroups": []
+    },
+    "workspace_update_notifications": {
+      "total": 19,
+      "externalGroups": []
+    }
+  },
+  "externalBilling": {
+    "billing_orders": [
+      {
+        "organizationSlug": null,
+        "user": "user-004",
+        "excluded": false,
+        "status": "paid",
+        "createdAt": "2026-04-07T13:09:25.390Z",
+        "updatedAt": "2026-04-07T13:09:25.390Z",
+        "receivedAt": null,
+        "quantity": 1,
+        "total": 1499,
+        "currency": "USD",
+        "eventName": null,
+        "objectType": null,
+        "lastEvent": "order_created",
+        "planInterval": "month"
+      },
+      {
+        "organizationSlug": null,
+        "user": "user-005",
+        "excluded": false,
+        "status": "paid",
+        "createdAt": "2026-04-09T11:26:31.322Z",
+        "updatedAt": "2026-04-09T11:26:31.322Z",
+        "receivedAt": null,
+        "quantity": 1,
+        "total": 1499,
+        "currency": "USD",
+        "eventName": null,
+        "objectType": null,
+        "lastEvent": "order_created",
+        "planInterval": "month"
+      }
+    ],
+    "billing_subscriptions": [
+      {
+        "organizationSlug": "by-the-spoonful",
+        "user": "user-004",
+        "excluded": false,
+        "status": "active",
+        "createdAt": "2026-04-07T13:09:26.100Z",
+        "updatedAt": "2026-04-07T13:10:13.061Z",
+        "receivedAt": null,
+        "quantity": 1,
+        "total": null,
+        "currency": null,
+        "eventName": null,
+        "objectType": null,
+        "lastEvent": "subscription_updated",
+        "planInterval": "month"
+      },
+      {
+        "organizationSlug": "simply-solved-s-organization",
+        "user": "user-005",
+        "excluded": false,
+        "status": "active",
+        "createdAt": "2026-04-09T11:26:32.081Z",
+        "updatedAt": "2026-04-09T14:03:57.594Z",
+        "receivedAt": null,
+        "quantity": 5,
+        "total": null,
+        "currency": null,
+        "eventName": null,
+        "objectType": null,
+        "lastEvent": "manual_schedule_downgrade",
+        "planInterval": "month"
+      }
+    ]
+  },
+  "saved": "C:\\projects\\GSC raw file samples\\collato\\reports\\kulato-audit-2026-10-05\\usage-evidence-sanitized.json"
+}

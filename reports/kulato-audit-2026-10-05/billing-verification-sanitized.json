@@ -1,0 +1,242 @@
+{
+  "auditAt": "2026-10-05T06:11:35.757Z",
+  "method": "Read-only exact-ID Lemon Squeezy GET requests; no subscription synchronization or database mutation",
+  "externalOrders": [
+    {
+      "organizationSlug": "by-the-spoonful",
+      "providerStatus": 200,
+      "type": "orders",
+      "status": "paid",
+      "testMode": true,
+      "storeId": "91773",
+      "variantId": "1498029",
+      "productName": "Collato - Monthly",
+      "variantName": "Default",
+      "total": 1499,
+      "currency": "USD",
+      "refunded": false,
+      "createdAt": "2026-04-07T13:09:22.000000Z",
+      "updatedAt": "2026-04-07T13:10:26.000000Z",
+      "renewsAt": null,
+      "endsAt": null,
+      "cancelled": null
+    },
+    {
+      "organizationSlug": "simply-solved-s-organization",
+      "providerStatus": 200,
+      "type": "orders",
+      "status": "paid",
+      "testMode": true,
+      "storeId": "91773",
+      "variantId": "1498029",
+      "productName": "Collato - Monthly",
+      "variantName": "Default",
+      "total": 1499,
+      "currency": "USD",
+      "refunded": false,
+      "createdAt": "2026-04-09T11:26:29.000000Z",
+      "updatedAt": "2026-04-09T11:27:32.000000Z",
+      "renewsAt": null,
+      "endsAt": null,
+      "cancelled": null
+    }
+  ],
+  "externalSubscriptions": [
+    {
+      "organizationSlug": "by-the-spoonful",
+      "providerStatus": 200,
+      "type": "subscriptions",
+      "status": "expired",
+      "testMode": true,
+      "storeId": "91773",
+      "variantId": "1498029",
+      "productName": "Collato - Monthly",
+      "variantName": "Default",
+      "total": null,
+      "currency": null,
+      "refunded": null,
+      "createdAt": "2026-04-07T13:09:17.000000Z",
+      "updatedAt": "2026-07-06T13:18:21.000000Z",
+      "renewsAt": "2026-07-07T13:09:15.000000Z",
+      "endsAt": "2026-07-06T13:18:21.000000Z",
+      "cancelled": true
+    },
+    {
+      "organizationSlug": "simply-solved-s-organization",
+      "providerStatus": 200,
+      "type": "subscriptions",
+      "status": "expired",
+      "testMode": true,
+      "storeId": "91773",
+      "variantId": "1498029",
+      "productName": "Collato - Monthly",
+      "variantName": "Default",
+      "total": null,
+      "currency": null,
+      "refunded": null,
+      "createdAt": "2026-04-09T11:26:25.000000Z",
+      "updatedAt": "2026-07-08T11:29:21.000000Z",
+      "renewsAt": "2026-07-09T11:26:22.000000Z",
+      "endsAt": "2026-07-08T11:29:21.000000Z",
+      "cancelled": true
+    }
+  ],
+  "recentWebhookOrders": [
+    {
+      "webhookReceivedAt": "2026-10-04T21:33:12.897Z",
+      "providerStatus": 404
+    },
+    {
+      "webhookReceivedAt": "2026-10-03T20:26:05.213Z",
+      "providerStatus": 404
+    },
+    {
+      "webhookReceivedAt": "2026-10-03T19:00:48.888Z",
+      "providerStatus": 404
+    },
+    {
+      "webhookReceivedAt": "2026-10-03T18:19:20.712Z",
+      "providerStatus": 404
+    },
+    {
+      "webhookReceivedAt": "2026-09-22T13:28:59.199Z",
+      "providerStatus": 404
+    },
+    {
+      "webhookReceivedAt": "2026-09-21T23:53:10.576Z",
+      "providerStatus": 404
+    },
+    {
+      "webhookReceivedAt": "2026-09-20T07:18:28.037Z",
+      "providerStatus": 404
+    },
+    {
+      "webhookReceivedAt": "2026-09-19T23:17:48.899Z",
+      "providerStatus": 404
+    },
+    {
+      "webhookReceivedAt": "2026-09-19T03:13:40.393Z",
+      "providerStatus": 404
+    },
+    {
+      "webhookReceivedAt": "2026-09-17T01:01:59.493Z",
+      "providerStatus": 404
+    }
+  ],
+  "authRecordQuality": [
+    {
+      "user": "user-001",
+      "emailField": "null",
+      "nameField": "null"
+    },
+    {
+      "user": "user-002",
+      "emailField": "string",
+      "nameField": "string"
+    },
+    {
+      "user": "user-003",
+      "emailField": "string",
+      "nameField": "string"
+    },
+    {
+      "user": "user-004",
+      "emailField": "string",
+      "nameField": "string"
+    },
+    {
+      "user": "user-005",
+      "emailField": "string",
+      "nameField": "string"
+    },
+    {
+      "user": "user-006",
+      "emailField": "empty string",
+      "nameField": "null"
+    },
+    {
+      "user": "user-007",
+      "emailField": "string",
+      "nameField": "null"
+    },
+    {
+      "user": "user-008",
+      "emailField": "empty string",
+      "nameField": "null"
+    },
+    {
+      "user": "user-009",
+      "emailField": "empty string",
+      "nameField": "null"
+    },
+    {
+      "user": "user-010",
+      "emailField": "empty string",
+      "nameField": "null"
+    },
+    {
+      "user": "user-011",
+      "emailField": "string",
+      "nameField": "null"
+    },
+    {
+      "user": "user-012",
+      "emailField": "string",
+      "nameField": "null"
+    },
+    {
+      "user": "user-013",
+      "emailField": "string",
+      "nameField": "null"
+    },
+    {
+      "user": "user-014",
+      "emailField": "string",
+      "nameField": "null"
+    },
+    {
+      "user": "user-015",
+      "emailField": "string",
+      "nameField": "string"
+    },
+    {
+      "user": "user-016",
+      "emailField": "string",
+      "nameField": "string"
+    },
+    {
+      "user": "user-017",
+      "emailField": "string",
+      "nameField": "string"
+    },
+    {
+      "user": "user-018",
+      "emailField": "string",
+      "nameField": "string"
+    },
+    {
+      "user": "user-019",
+      "emailField": "string",
+      "nameField": "string"
+    },
+    {
+      "user": "user-020",
+      "emailField": "string",
+      "nameField": "string"
+    }
+  ],
+  "externalOwnerSeatOverrides": [
+    {
+      "organizationSlug": "by-the-spoonful",
+      "freeSeats": 0
+    },
+    {
+      "organizationSlug": "simply-solved-s-organization",
+      "freeSeats": 0
+    },
+    {
+      "organizationSlug": "good-gut-hut",
+      "freeSeats": 0
+    }
+  ]
+}
