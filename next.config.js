@@ -3,7 +3,7 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ["pdfkit"],
     outputFileTracingIncludes: {
-      "/api/workspace-reports/*/export": ["./node_modules/pdfkit/js/standard-fonts/*.cjs"]
+      "/api/workspace-reports/*/export": ["./node_modules/pdfkit/js/standard-fonts/**/*"]
     }
   },
   async redirects() {
