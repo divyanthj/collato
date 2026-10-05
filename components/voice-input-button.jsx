@@ -1,9 +1,10 @@
 "use client";
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import { readResponsePayload } from "@/lib/client-api";
-export const VoiceInputButton = forwardRef(function VoiceInputButton({ onTranscript, onAudioData, onRecordingChange }, ref) {
+export const VoiceInputButton = forwardRef(function VoiceInputButton({ onTranscript, onAudioData, onRecordingChange, onBusyChange }, ref) {
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
+    useEffect(() => { onBusyChange?.(isRecording || isTranscribing); }, [isRecording, isTranscribing, onBusyChange]);
     const [error, setError] = useState(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);

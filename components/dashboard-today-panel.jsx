@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { AlertBanner } from "@/components/alert-banner";
-import { WorkspaceUpdateIntake } from "@/components/workspace-update-intake";
+import { useRouter } from "next/navigation";
 import { readResponsePayload } from "@/lib/client-api";
 
 function formatTaskStatus(status) {
@@ -58,24 +58,6 @@ function sortTodayTasks(tasks) {
   });
 }
 
-function buildUpdateEvents(updates) {
-  return updates.map((update) => ({
-    id: `update-${update.id}`,
-    type: "update",
-    timestamp: update.createdAt,
-    actor: update.createdByName,
-    actorEmail: update.createdBy,
-    title: update.workspaceName,
-    description: update.structured.summary || update.body,
-    workspaceSlug: update.workspaceSlug,
-    statusMetadata: {
-      channel: update.channel,
-      inputMethod: update.inputMethod
-    },
-    update
-  }));
-}
-
 function buildSuggestedTasks(updates) {
   return updates.flatMap((update) => update.structured.actionItems.map((action, index) => ({
     id: `${update.id}-${index}`,
@@ -93,12 +75,9 @@ export function DashboardTodayPanel({
   workspaces,
   todayTasks,
   recentUpdates,
-  isAuthenticated,
-  currentUserName,
-  currentUserEmail,
-  canManageAiPrivacy = false
+  isAuthenticated
 }) {
-  const [captureRequest, setCaptureRequest] = useState(null);
+  const router = useRouter();
   const [localTodayTasks, setLocalTodayTasks] = useState(todayTasks);
   const [availableSuggestions, setAvailableSuggestions] = useState(() => buildSuggestedTasks(recentUpdates));
   const [isClient, setIsClient] = useState(false);
@@ -113,7 +92,6 @@ export function DashboardTodayPanel({
   const [taskError, setTaskError] = useState(null);
   const [taskStatusMessage, setTaskStatusMessage] = useState(null);
   const [isCreatingTask, startCreatingTask] = useTransition();
-  const activityEvents = useMemo(() => buildUpdateEvents(recentUpdates), [recentUpdates]);
   const defaultWorkspaceSlug = workspaces[0]?.slug ?? "";
   const canCapture = isAuthenticated && workspaces.length > 0;
   const selectedTaskWorkspace = useMemo(() => workspaces.find((workspace) => workspace.slug === selectedTaskWorkspaceSlug) ?? workspaces[0], [selectedTaskWorkspaceSlug, workspaces]);
@@ -143,10 +121,8 @@ export function DashboardTodayPanel({
   }, [recentUpdates]);
 
   const openCapture = (workspaceSlug = "") => {
-    setCaptureRequest({
-      key: `${Date.now()}-${workspaceSlug || "manual"}`,
-      workspaceSlug: workspaceSlug || defaultWorkspaceSlug
-    });
+    const slug = workspaceSlug || defaultWorkspaceSlug;
+    if (slug) router.push(`/dashboard/${slug}/evidence#capture`);
   };
 
   const openCreateTask = () => {
@@ -271,7 +247,7 @@ export function DashboardTodayPanel({
             onClick={() => openCapture()}
             disabled={!canCapture}
           >
-            Capture update
+            Add evidence
           </button>
         </div>
       </div>
@@ -358,21 +334,6 @@ export function DashboardTodayPanel({
         </div>
       </div>
 
-      <div className="mt-5">
-        <WorkspaceUpdateIntake
-          workspaces={workspaces}
-          initialUpdates={recentUpdates}
-          initialActivityEvents={activityEvents}
-          isAuthenticated={canCapture}
-          currentUserName={currentUserName}
-          currentUserEmail={currentUserEmail}
-          canManageAiPrivacy={canManageAiPrivacy}
-          initialSelectedWorkspaceSlug={defaultWorkspaceSlug}
-          captureRequest={captureRequest}
-          showHeader={false}
-          showActivity={false}
-        />
-      </div>
       {isClient && isCreateDialogOpen ? createPortal((
         <div className="modal modal-open" role="dialog" aria-modal="true" aria-labelledby="dashboard-create-task-title">
           <div className="modal-box relative max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-6xl overflow-y-auto rounded-[1.5rem] bg-base-100 p-0 shadow-soft sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:rounded-[2rem]">

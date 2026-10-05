@@ -39,6 +39,7 @@ export const POST = auth(async (request) => {
             extractedText: extraction.extractedText,
             manualNotes,
             extractionStatus: extraction.extractionStatus,
+            reviewState: extraction.extractionStatus === "ai_extracted" ? "needs_review" : "recorded",
             extractionSummary: extraction.extractionSummary,
             blobUrl: blob.blobUrl,
             blobDownloadUrl: blob.blobDownloadUrl,

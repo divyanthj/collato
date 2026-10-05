@@ -1,8 +1,11 @@
+import { textModelOptions } from "@/lib/ai-models";
+import { normalizeReportPeriod } from "@/lib/evidence-utils";
+import { saveReportVersion } from "@/lib/workspace-reports";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getAuthorizedWorkspace, getWorkspaceProgressReportContext } from "@/lib/data";
 import { openai } from "@/lib/openai";
-import { buildWorkspaceProgressReportHtml } from "@/lib/report-html";
+
 import { getReportTemplateDefinition } from "@/lib/report-templates";
 export const POST = auth(async (request) => {
     if (!request.auth?.user?.email) {
@@ -22,7 +25,9 @@ export const POST = auth(async (request) => {
     if (!workspace) {
         return NextResponse.json({ error: "You do not have access to this workspace" }, { status: 403 });
     }
-    const context = await getWorkspaceProgressReportContext(workspaceSlug, request.auth.user.email);
+    let period;
+    try { period = normalizeReportPeriod(body); } catch (error) { return NextResponse.json({ error: error.message }, { status: 400 }); }
+    const context = await getWorkspaceProgressReportContext(workspaceSlug, request.auth.user.email, period);
     if (!context) {
         return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
@@ -30,88 +35,10 @@ export const POST = auth(async (request) => {
         .map(([questionId, answer]) => `${questionId}: ${String(answer).trim()}`)
         .filter((line) => !line.endsWith(":"))
         .join("\n");
-    const gapResponse = await openai.responses.create({
-        model: "gpt-5.2",
-        input: [
-            {
-                role: "system",
-                content: [
-                    {
-                        type: "input_text",
-                        text: "You review workspace evidence before report generation. Identify only the most important missing information that would materially improve a professional progress report. If the report can proceed, return no questions. Focus on missing project facts like date range, client commitments, status updates, blockers, approvals, deliverables, risks, or next steps. Return strict JSON."
-                    }
-                ]
-            },
-            {
-                role: "user",
-                content: [
-                    {
-                        type: "input_text",
-                        text: `Workspace: ${context.workspace.name}
-
-Retrieved evidence:
-${context.retrievedContext || "No retrieved evidence found."}
-
-Recent updates:
-${context.recentUpdates || "No recent updates."}
-
-Tasks:
-${context.taskSnapshot || "No tasks."}
-
-Files:
-${context.fileSnapshot || "No files."}
-
-Existing clarification answers:
-${clarificationContext || "None provided."}
-
-Selected template:
-${template.name}
-
-Template guidance:
-${template.promptGuidance}`
-                    }
-                ]
-            }
-        ],
-        text: {
-            format: {
-                type: "json_schema",
-                name: "workspace_report_gap_check",
-                schema: {
-                    type: "object",
-                    additionalProperties: false,
-                    properties: {
-                        canGenerate: { type: "boolean" },
-                        missingQuestions: {
-                            type: "array",
-                            items: {
-                                type: "object",
-                                additionalProperties: false,
-                                properties: {
-                                    id: { type: "string" },
-                                    question: { type: "string" },
-                                    reason: { type: "string" }
-                                },
-                                required: ["id", "question", "reason"]
-                            }
-                        }
-                    },
-                    required: ["canGenerate", "missingQuestions"]
-                }
-            }
-        }
-    });
-    const gapCheck = JSON.parse(gapResponse.output_text);
-    const normalizedQuestions = gapCheck.missingQuestions.slice(0, 4);
-    if (!gapCheck.canGenerate && normalizedQuestions.length > 0) {
-        return NextResponse.json({
-            status: "needs_clarification",
-            missingQuestions: normalizedQuestions
-        }, { status: 200 });
-    }
     if (template.id === "collato-monthly-report") {
         const monthlyResponse = await openai.responses.create({
-            model: "gpt-5.2",
+            ...textModelOptions(),
+            max_output_tokens: 12000,
             input: [
                 {
                     role: "system",
@@ -233,25 +160,16 @@ ${template.promptGuidance}`
         const normalizedReport = {
             templateId: "collato-monthly-report",
             ...report,
+            reportDate: period.reportDate,
+            monthOf: `${period.start} to ${period.end}`,
             sourceHighlights: report.sourceHighlights.length > 0 ? report.sourceHighlights : context.sourceLabels.slice(0, 5)
         };
-        return NextResponse.json({
-            status: "ready",
-            ...normalizedReport,
-            html: buildWorkspaceProgressReportHtml({
-                workspace: {
-                    ...context.workspace,
-                    fileCount: context.counts.fileCount,
-                    updateCount: context.counts.updateCount,
-                    taskCount: context.counts.taskCount
-                },
-                report: normalizedReport,
-                generatedAt: new Date()
-            })
-        }, { status: 200 });
+        const saved = await saveReportVersion({ workspace: { ...context.workspace, ...context.counts }, report: { ...normalizedReport, period, sources: context.sources, coverage: context.coverage }, email: request.auth.user.email });
+        return NextResponse.json(saved, { status: 200 });
     }
     const response = await openai.responses.create({
-        model: "gpt-5.2",
+        ...textModelOptions(),
+            max_output_tokens: 12000,
         input: [
             {
                 role: "system",
@@ -336,20 +254,6 @@ ${template.promptGuidance}`
         ...report,
         sourceHighlights: report.sourceHighlights.length > 0 ? report.sourceHighlights : context.sourceLabels.slice(0, 5)
     };
-    return NextResponse.json({
-        status: "ready",
-        templateId: template.id,
-        ...normalizedReport,
-        html: buildWorkspaceProgressReportHtml({
-            workspace: {
-                ...context.workspace,
-                fileCount: context.counts.fileCount,
-                updateCount: context.counts.updateCount,
-                taskCount: context.counts.taskCount
-            },
-            report: normalizedReport,
-            generatedAt: new Date()
-        })
-    }, { status: 200 });
+    const saved = await saveReportVersion({ workspace: { ...context.workspace, ...context.counts }, report: { ...normalizedReport, templateId: template.id, period, sources: context.sources, coverage: context.coverage }, email: request.auth.user.email });
+    return NextResponse.json(saved, { status: 200 });
 });
-

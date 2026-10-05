@@ -1,5 +1,11 @@
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    serverComponentsExternalPackages: ["pdfkit"],
+    outputFileTracingIncludes: {
+      "/api/workspace-reports/*/export": ["./node_modules/pdfkit/js/standard-fonts/*.cjs"]
+    }
+  },
   async redirects() {
     return [
       {

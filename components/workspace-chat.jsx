@@ -162,7 +162,7 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
       </div>
 
       <p className="mt-3 max-w-2xl text-sm leading-7 text-base-content/70">
-        Ask questions across uploaded files and team updates. Answers now stream in like a real chat instead of waiting for the full response first.
+        Ask questions across uploaded files and team updates. Answers link back to the evidence behind them.
       </p>
       <div className="mt-4 rounded-[1.25rem] border border-base-300 bg-base-100 p-4 text-sm leading-6 text-base-content/68">
         <span className="font-medium text-neutral">Use this when:</span> the workspace already contains knowledge or updates and you want answers over that saved context instead of adding new information.
@@ -225,7 +225,7 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
                     </div>) : null}
                 </div>
               </div>))) : (<div className="rounded-[1.25rem] border border-dashed border-base-300 bg-base-100 p-8 text-center text-sm leading-7 text-base-content/60">
-              Start a conversation with the workspace knowledge base. If answers feel thin, add more context in Knowledge or Updates first.
+              Start a conversation with the workspace knowledge base. Add evidence when the workspace needs more context.
             </div>)}
           <div ref={scrollRef}/>
         </div>
@@ -245,7 +245,7 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
           <button type="button" className="btn btn-primary" onClick={handleAsk} disabled={!isAuthenticated || isStreaming || !selectedWorkspaceSlug || !question.trim()}>
             {isStreaming ? "Streaming answer..." : "Send"}
           </button>
-          <p className="text-sm leading-7 text-base-content/60">Responses appear progressively so you can follow the answer as it forms.</p>
+          <p className="text-sm leading-7 text-base-content/60">Check the cited sources before acting on an answer.</p>
         </div>
       </div>
     </div>);
