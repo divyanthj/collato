@@ -11,6 +11,7 @@ const load = async path => import(`data:text/javascript;base64,${Buffer.from(awa
 const evidence = await load("lib/evidence-utils.js");
 const validation = await load("lib/client-report-validation.js");
 const html = await load("lib/report-html.js");
+const templates = await load("lib/report-templates.js");
 async function module(path, mocks) {
   const context = vm.createContext({ console, Date, Buffer, Response, URL });
   const mod = new vm.SourceTextModule(await source(path), { context });
@@ -125,4 +126,31 @@ test("exports produce actual PDF and DOCX bytes from saved server content", asyn
 test("report cadence clamps month-end dates and advances weekly", () => {
   assert.equal(evidence.advanceReportDate("2026-01-31", "monthly"), "2026-02-28");
   assert.equal(evidence.advanceReportDate("2026-12-28", "weekly"), "2027-01-04");
+});
+
+test("both generation templates consume the actual dated context and persist a renderable report", async () => {
+  const dataSource = await source("lib/data.js");
+  const a = dataSource.indexOf("function getAiVisibleWorkspaceInputs"), b = dataSource.indexOf("function mapWorkspaceTask", a);
+  const c = dataSource.indexOf("export async function getWorkspaceProgressReportContext"), d = dataSource.indexOf("export async function getWorkspaceBySlug", c);
+  const contextModule = new vm.SourceTextModule(dataSource.slice(a, b) + dataSource.slice(c, d), { context: vm.createContext({ getWorkspaceDetailData: async () => ({ ...workspaceData, files: [], updates: [], tasks: [] }) }) });
+  await contextModule.link(() => { throw new Error("Unexpected import"); }); await contextModule.evaluate();
+  const reports = await module("lib/workspace-reports.js", {
+    mongodb: { ObjectId }, "@/lib/mongodb": { getDatabase: async () => ({ collection: () => ({ insertOne: async () => ({ insertedId: new ObjectId() }) }) }) },
+    "@/lib/report-html": html, "@/lib/client-report-validation": validation
+  });
+  const api = await module("app/api/ai/workspace-report/route.js", {
+    "next/server": { NextResponse: json }, "@/auth": { auth: handler => handler },
+    "@/lib/data": { getAuthorizedWorkspace: async () => workspaceData.workspace, getWorkspaceProgressReportContext: contextModule.namespace.getWorkspaceProgressReportContext },
+    "@/lib/openai": { openai: { responses: { create: async input => {
+      assert.match(input.input[1].content[0].text, /2026-10-01/);
+      const monthly = input.text.format.name.includes("monthly");
+      return { output_text: JSON.stringify(monthly ? { overview: "No evidence in period.", reportDate: "Unknown", preparedBy: "Unknown", reportNo: "Unknown", monthOf: "Unknown", projectAssociate: "Unknown", statusSummary: [], queryContacts: [], generalInstructions: [], projectOverviewRows: [], otherInfoRows: [], sourceHighlights: [] } : draft) };
+    } } } }, "@/lib/ai-models": { textModelOptions: () => ({ model: "gpt-6.1-sol" }) },
+    "@/lib/evidence-utils": evidence, "@/lib/workspace-reports": reports, "@/lib/report-templates": templates
+  });
+  for (const templateId of ["default-progress", "collato-monthly-report"]) {
+    const result = await api.POST(request({ workspaceSlug: "sample", templateId, periodStart: "2026-10-01", periodEnd: "2026-10-05", reportDate: "2026-10-05" }));
+    assert.equal(result.status, 200); assert.ok(result.body.id); assert.equal(validation.validateWorkspaceReportResult(result.body, templateId), "ready");
+    assert.match(result.body.html, /2026-10-01/); assert.doesNotMatch(result.body.html, />undefined</);
+  }
 });
