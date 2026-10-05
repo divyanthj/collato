@@ -1,9 +1,15 @@
 # Product activity tracking — 5 October 2026
 
-Implementation status: local working-tree changes, tested and built. No deployment,
-push, database mutation, test purchase, provider connection, or live event injection
-was performed by this instrumentation work. Tracking starts for visitors after the
-updated application is deployed and its DataFast script loads.
+Production status: deployed to collato.io on 5 October 2026 after fourteen analytics
+tests, five auth-adapter tests, lint, and a successful Vercel production build.
+Normal owner navigation delivered two `workspace_section_viewed` events to DataFast.
+Six exact owner/Green Sketch email addresses are configured privately on the server.
+Historical identity rows and billing caches were not repaired; no purchase or
+payment-provider connection was performed.
+
+The SharePoint events below are implemented only in the local unfinished feature.
+They were excluded from this clean production release and will start only when
+that feature is separately released.
 
 ## Measurement contract
 
