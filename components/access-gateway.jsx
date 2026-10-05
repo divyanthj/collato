@@ -6,7 +6,7 @@ import { signOut } from "next-auth/react";
 import { AlertBanner } from "@/components/alert-banner";
 import { InviteInbox } from "@/components/invite-inbox";
 import { readResponsePayload } from "@/lib/client-api";
-import { trackDatafastGoal } from "@/lib/client-analytics";
+import { analyticsHttpFailure, trackDatafastGoal } from "@/lib/client-analytics";
 
 export function AccessGateway({
   displayName,
@@ -66,12 +66,14 @@ export function AccessGateway({
         }
         router.refresh();
       } catch (gatewayError) {
+        trackDatafastGoal("organization_create_failed", { source: "access_gateway", stage: "organization" });
         setError(gatewayError instanceof Error ? gatewayError.message : "Could not create organization");
       }
     });
   };
 
   const handleStartSubscription = () => {
+    let failureCategory = "network_or_client";
     setError(null);
     setSuccessMessage(null);
     trackDatafastGoal("checkout_started", {
@@ -92,13 +94,16 @@ export function AccessGateway({
           })
         });
 
+        failureCategory = analyticsHttpFailure(response.status);
         const result = await readResponsePayload(response);
         if (!response.ok || !result.url) {
           throw new Error(result.error ?? "Could not start subscription");
         }
 
+        trackDatafastGoal("checkout_redirected", { source: "access_gateway", interval, quantity: normalizedQuantity });
         window.location.href = result.url;
       } catch (checkoutError) {
+        trackDatafastGoal("checkout_failed", { source: "access_gateway", stage: "checkout", interval, failure_category: failureCategory });
         setError(checkoutError instanceof Error ? checkoutError.message : "Could not start subscription");
       }
     });

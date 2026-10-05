@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/alert-banner";
 import { readResponsePayload } from "@/lib/client-api";
+import { analyticsHttpFailure, trackDatafastGoal } from "@/lib/client-analytics";
 
 export function CreateOrganizationButton({
   suggestedOrganizationName = "My Organization",
@@ -37,6 +38,9 @@ export function CreateOrganizationButton({
   const handleConfirm = async () => {
     setError(null);
     setIsPending(true);
+    trackDatafastGoal("organization_created_started", { source: "create_organization" });
+    let stage = "organization";
+    let failureCategory = "network_or_client";
 
     try {
       const response = await fetch("/api/onboarding/create-organization", {
@@ -48,6 +52,8 @@ export function CreateOrganizationButton({
       const result = await readResponsePayload(response);
         if (!response.ok) {
         if (result?.code === "NO_ACTIVE_SUBSCRIPTION") {
+          stage = "checkout";
+          trackDatafastGoal("checkout_started", { source: "create_organization", interval: "month", quantity: normalizedSeats });
           const checkoutOrgName = encodeURIComponent(suggestedOrganizationName);
           const checkoutReturnTo = `/dashboard?postCheckoutCreateOrg=1&postCheckoutOrgName=${checkoutOrgName}`;
           const checkoutResponse = await fetch("/api/billing/checkout", {
@@ -62,8 +68,10 @@ export function CreateOrganizationButton({
             })
           });
 
+          failureCategory = analyticsHttpFailure(checkoutResponse.status);
           const checkout = await readResponsePayload(checkoutResponse);
           if (checkoutResponse.ok && checkout?.url) {
+            trackDatafastGoal("checkout_redirected", { source: "create_organization", interval: "month", quantity: normalizedSeats });
             window.location.href = checkout.url;
             return;
           }
@@ -76,8 +84,10 @@ export function CreateOrganizationButton({
       const nextSlug = String(result.slug || "").trim();
       const nextUrl = nextSlug ? buildReturnUrl(nextSlug) : "/dashboard?orgCreated=1";
 
+      trackDatafastGoal("organization_created", { source: "create_organization" });
       router.push(nextUrl);
     } catch (createError) {
+      trackDatafastGoal(stage === "checkout" ? "checkout_failed" : "organization_create_failed", { source: "create_organization", stage, ...(stage === "checkout" ? { failure_category: failureCategory } : {}) });
       setError(createError instanceof Error ? createError.message : "Could not create organization");
       setIsPending(false);
     }
@@ -94,6 +104,7 @@ export function CreateOrganizationButton({
       if (!response.ok || !result?.url) {
         throw new Error(result.error ?? "Could not open billing portal");
       }
+      trackDatafastGoal("billing_portal_redirected", { source: "create_organization" });
       window.location.href = result.url;
     } catch (portalError) {
       setError(portalError instanceof Error ? portalError.message : "Could not open billing portal");

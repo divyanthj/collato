@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertBanner } from "@/components/alert-banner";
-import { trackDatafastGoal } from "@/lib/client-analytics";
+import { analyticsHttpFailure, trackDatafastGoal } from "@/lib/client-analytics";
 
 export function PricingSection({ pricing, isAuthenticated }) {
   const [quantity, setQuantity] = useState(3);
@@ -21,6 +21,7 @@ export function PricingSection({ pricing, isAuthenticated }) {
   }, [quantity]);
 
   const handleCheckout = async (plan) => {
+    let failureCategory = "network_or_client";
     setCheckoutError(null);
     setLoadingPlan(plan.key);
     trackDatafastGoal("checkout_started", {
@@ -41,14 +42,17 @@ export function PricingSection({ pricing, isAuthenticated }) {
         })
       });
 
+      failureCategory = analyticsHttpFailure(response.status);
       const result = await response.json();
 
       if (!response.ok || !result.url) {
         throw new Error(result.error ?? "Could not create checkout session");
       }
 
+      trackDatafastGoal("checkout_redirected", { source: "marketing_pricing", interval: plan.interval, quantity: validatedQuantity });
       window.location.href = result.url;
     } catch (error) {
+      trackDatafastGoal("checkout_failed", { source: "marketing_pricing", stage: "checkout", interval: plan.interval, failure_category: failureCategory });
       setCheckoutError(error instanceof Error ? error.message : "Could not create checkout session");
       setLoadingPlan(null);
     }

@@ -3,6 +3,9 @@ import Script from "next/script";
 import "./globals.css";
 import appConfig from "@/config/app";
 import { SiteNav } from "@/components/site-nav";
+import { auth } from "@/auth";
+import { getAnalyticsCohort } from "@/lib/analytics-cohort";
+import { AnalyticsCohortSync } from "@/components/analytics-cohort-sync";
 
 const bodyFont = Manrope({
   subsets: ["latin"],
@@ -19,7 +22,9 @@ export const metadata = {
   description: appConfig.appDescription,
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const session = await auth();
+  const analyticsCohort = getAnalyticsCohort(session?.user?.email);
   return (
     <html
       lang="en"
@@ -27,10 +32,12 @@ export default function RootLayout({ children }) {
       className={`${bodyFont.variable} ${displayFont.variable}`}
     >
       <body>
+        <AnalyticsCohortSync cohort={analyticsCohort} />
         <SiteNav />
         {children}
         <Script id="datafast-queue" strategy="beforeInteractive">
           {`
+            window.collatoAnalyticsCohort = ${JSON.stringify(analyticsCohort)};
             window.datafast = window.datafast || function() {
               (window.datafast.q = window.datafast.q || []).push(arguments);
             };

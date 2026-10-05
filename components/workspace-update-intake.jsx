@@ -178,6 +178,7 @@ export function WorkspaceUpdateIntake({
             if (!response.ok) {
                 throw new Error(result.error ?? `Could not upload ${file.name}`);
             }
+            trackDatafastGoal("knowledge_file_added", { source: "updates", file_type: result.file?.fileType || file.type, input_method: "file_upload" });
             return result.file ?? result;
         }));
         return uploaded;
@@ -208,6 +209,7 @@ export function WorkspaceUpdateIntake({
         link.href = url;
         link.download = `workspace-updates.${format}`;
         link.click();
+        trackDatafastGoal("updates_export_requested", { source: "updates", format, item_count: exportRows.length });
         URL.revokeObjectURL(url);
     };
     const handleSubmit = () => {
@@ -275,11 +277,12 @@ export function WorkspaceUpdateIntake({
                         throw new Error(result.error ?? "Could not save update");
                     }
                     trackDatafastGoal("workspace_update_added", {
-                        workspace_slug: selectedWorkspace.slug,
+                        source: "updates",
+                        has_attachments: hasSupportingFiles ? "yes" : "no",
                         input_method: isVoiceUsed ? "voice" : "typed",
                         channel: DEFAULT_UPDATE_CHANNEL
                     });
-                    if (savedUpdates.length === 0) {
+                    if (!savedUpdates.some((update) => update.workspaceSlug === selectedWorkspace.slug)) {
                         trackDatafastGoal("first_update_added", {
                             workspace_slug: selectedWorkspace.slug,
                             input_method: isVoiceUsed ? "voice" : "typed"
@@ -314,6 +317,7 @@ export function WorkspaceUpdateIntake({
                 setIsCaptureDialogOpen(false);
             }
             catch (submitError) {
+                trackDatafastGoal("workspace_capture_failed", { source: "updates", stage: "capture", input_method: isVoiceUsed ? "voice" : "typed" });
                 setError(submitError instanceof Error ? submitError.message : "Could not submit update");
             }
         });
@@ -349,6 +353,7 @@ export function WorkspaceUpdateIntake({
                 throw new Error(result.error ?? "Could not update action item");
             }
             setSavedUpdates((current) => current.map((update) => update.id === result.id ? result : update));
+            trackDatafastGoal("update_action_state_changed", { source: "updates", status: state });
             setStatusMessage(`Follow-up marked as ${ACTION_TRACKER_STATE_LABELS[state].toLowerCase()}.`);
         }
         catch (updateError) {
@@ -396,6 +401,7 @@ export function WorkspaceUpdateIntake({
                 throw new Error(result.error ?? "Could not update AI privacy");
             }
             setSavedUpdates((current) => current.map((item) => item.id === result.id ? result : item));
+            trackDatafastGoal("ai_privacy_changed", { scope: "update", ai_private: nextValue ? "yes" : "no" });
             setSavedActivityEvents((current) => current.map((event) => event.update?.id === result.id
                 ? {
                     ...event,

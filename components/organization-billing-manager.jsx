@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/alert-banner";
 import appConfig from "@/config/app";
 import { readResponsePayload } from "@/lib/client-api";
+import { analyticsHttpFailure, trackDatafastGoal } from "@/lib/client-analytics";
 
 const BILLABLE_INTERVALS = new Set(["month", "year"]);
 
@@ -88,6 +89,7 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
         if (!response.ok || !result.url) {
           throw new Error(result.error ?? "Could not open billing portal");
         }
+        trackDatafastGoal("billing_portal_redirected", { source: "organization_billing" });
         window.location.href = result.url;
       } catch (portalError) {
         setError(portalError instanceof Error ? portalError.message : "Could not open billing portal");
@@ -99,6 +101,9 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
     setError(null);
     setStatusMessage(null);
     confirmationDialogRef.current?.close();
+    const checkoutRequired = !hasPaidSubscription;
+    let failureCategory = "network_or_client";
+    if (checkoutRequired) trackDatafastGoal("checkout_started", { source: "organization_billing", interval, quantity: Math.max(normalizedSeatDelta, 1) });
     startTransition(async () => {
       try {
         if (shouldResumeBeforeUpdate) {
@@ -124,10 +129,12 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
               mode: "new_subscription"
             })
           });
+          failureCategory = analyticsHttpFailure(checkoutResponse.status);
           const checkoutResult = await readResponsePayload(checkoutResponse);
           if (!checkoutResponse.ok || !checkoutResult.url) {
             throw new Error(checkoutResult.error ?? "Could not start billing plan");
           }
+          trackDatafastGoal("checkout_redirected", { source: "organization_billing", interval, quantity: Math.max(normalizedSeatDelta, 1) });
           window.location.href = checkoutResult.url;
           return;
         }
@@ -157,6 +164,7 @@ export function OrganizationBillingManager({ organizationSlug, initialBillingSta
         }
         router.refresh();
       } catch (changeError) {
+        if (checkoutRequired) trackDatafastGoal("checkout_failed", { source: "organization_billing", interval, stage: "checkout", failure_category: failureCategory });
         setError(changeError instanceof Error ? changeError.message : "Could not change plan");
       }
     });

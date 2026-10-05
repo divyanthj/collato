@@ -52,8 +52,9 @@ export function CreateWorkspaceForm({
                 setDescription("");
                 setMemberEmails("");
                 trackDatafastGoal("workspace_created", {
-                    workspace_slug: result?.slug ?? "",
-                    organization_slug: organizationSlug
+                    source: "workspace_create",
+                    has_description: description.trim() ? "yes" : "no",
+                    has_invites: memberEmails.trim() ? "yes" : "no"
                 });
                 if (result?.slug) {
                     router.push(`/dashboard/${result.slug}?created=1&fromOnboarding=1`);
@@ -62,6 +63,7 @@ export function CreateWorkspaceForm({
                 router.refresh();
             }
             catch (createError) {
+                trackDatafastGoal("workspace_create_failed", { source: "workspace_create", stage: "workspace" });
                 setError(createError instanceof Error ? createError.message : "Could not create workspace");
             }
         });

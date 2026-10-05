@@ -32,10 +32,12 @@ export function AuthEntryPanel({ mode = "hero", redirectTo = "/dashboard" }) {
                 if (!response.ok) {
                     throw new Error(result.error ?? "Could not send sign-in email");
                 }
+                trackDatafastGoal("auth_link_sent", { method: "email_magic_link", source: mode === "compact" ? "dashboard_sidebar" : "hero_panel" });
                 setStatusMessage(`Magic link sent to ${email}.`);
                 setEmail("");
             }
             catch (signInError) {
+                trackDatafastGoal("auth_failed", { method: "email_magic_link", source: mode === "compact" ? "dashboard_sidebar" : "hero_panel" });
                 setError(signInError instanceof Error ? signInError.message : "Could not send sign-in email");
             }
         });

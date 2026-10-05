@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ClientEventTracker } from "@/components/client-event-tracker";
 
 const WORKSPACE_TABS = [
   {
@@ -40,6 +41,7 @@ export function WorkspaceSubnav({ workspaceSlug, activeTab }) {
 
   return (
     <div className="mt-5 max-w-full overflow-x-auto pb-1">
+      <ClientEventTracker key={`${workspaceSlug}:${activeTab}`} goalName="workspace_section_viewed" metadata={{ section: activeTab }} />
       <div role="tablist" className="tabs tabs-boxed w-max rounded-[1rem] border border-base-300 bg-base-100/90 p-1">
         {WORKSPACE_TABS.map((tab) => {
           const isActive = tab.id === activeTab;

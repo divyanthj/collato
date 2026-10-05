@@ -42,11 +42,11 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
     }, [messages]);
     const handleAsk = async () => {
         const trimmedQuestion = question.trim();
-        if (!trimmedQuestion) {
+        if (!trimmedQuestion || isStreaming || !selectedWorkspaceSlug) {
             return;
         }
         trackDatafastGoal("knowledge_base_question_asked", {
-            workspace_slug: selectedWorkspaceSlug,
+            source: "chat",
             question_length: trimmedQuestion.length
         });
         setError(null);
@@ -88,6 +88,25 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = "";
+            let completed = false;
+            let answerText = "";
+            let sourceCount = 0;
+            const handleStreamEvent = (event) => {
+                if (event.type === "delta") {
+                    answerText += String(event.text || "");
+                    setMessages((current) => current.map((message) => message.id === assistantId
+                        ? { ...message, text: `${message.text}${event.text}` }
+                        : message));
+                }
+                if (event.type === "meta") {
+                    completed = true;
+                    sourceCount = Array.isArray(event.sources) ? event.sources.length : 0;
+                    setMessages((current) => current.map((message) => message.id === assistantId
+                        ? { ...message, sources: event.sources, followUps: event.followUps, isStreaming: false }
+                        : message));
+                }
+                if (event.type === "error") throw new Error(event.error);
+            };
             let isReading = true;
             while (isReading) {
                 const { done, value } = await reader.read();
@@ -102,30 +121,13 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
                     if (!line.trim()) {
                         continue;
                     }
-                    const event = JSON.parse(line);
-                    if (event.type === "delta") {
-                        setMessages((current) => current.map((message) => message.id === assistantId
-                            ? {
-                                ...message,
-                                text: `${message.text}${event.text}`
-                            }
-                            : message));
-                    }
-                    if (event.type === "meta") {
-                        setMessages((current) => current.map((message) => message.id === assistantId
-                            ? {
-                                ...message,
-                                sources: event.sources,
-                                followUps: event.followUps,
-                                isStreaming: false
-                            }
-                            : message));
-                    }
-                    if (event.type === "error") {
-                        throw new Error(event.error);
-                    }
+                    handleStreamEvent(JSON.parse(line));
                 }
             }
+            buffer += decoder.decode();
+            if (buffer.trim()) handleStreamEvent(JSON.parse(buffer));
+            if (!completed || !answerText.trim()) throw new Error("The answer was interrupted. Please try again.");
+            trackDatafastGoal("knowledge_base_answer_received", { source: "chat", has_sources: sourceCount > 0 ? "yes" : "no", source_count: sourceCount });
             setMessages((current) => current.map((message) => message.id === assistantId
                 ? {
                     ...message,
@@ -134,6 +136,7 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
                 : message));
         }
         catch (askError) {
+            trackDatafastGoal("knowledge_base_answer_failed", { source: "chat", stage: "stream" });
             setError(askError instanceof Error ? askError.message : "Could not answer question");
             setMessages((current) => current.map((message) => message.id === assistantId
                 ? {
@@ -205,7 +208,7 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
                                 {label}
                               </span>);
                         }
-                        return (<a key={key} className="badge badge-outline cursor-pointer hover:badge-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" href={href} target={href.startsWith("/api/") ? "_blank" : undefined} rel={href.startsWith("/api/") ? "noreferrer" : undefined}>
+                        return (<a key={key} className="badge badge-outline cursor-pointer hover:badge-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" href={href} onClick={() => trackDatafastGoal("answer_source_opened", { source: "chat" })} target={href.startsWith("/api/") ? "_blank" : undefined} rel={href.startsWith("/api/") ? "noreferrer" : undefined}>
                               {label}
                             </a>);
                     })}
@@ -215,7 +218,7 @@ export function WorkspaceChat({ workspaces, initialMessages = [], isAuthenticate
                   {message.role === "assistant" && message.followUps && message.followUps.length > 0 ? (<div className="mt-4">
                       <div className="text-xs uppercase tracking-[0.18em] opacity-60">Suggested follow-ups</div>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {message.followUps.map((item) => (<button key={item} type="button" className="badge badge-outline cursor-pointer px-3 py-3" onClick={() => setQuestion(item)} disabled={isStreaming}>
+                        {message.followUps.map((item) => (<button key={item} type="button" className="badge badge-outline cursor-pointer px-3 py-3" onClick={() => { setQuestion(item); trackDatafastGoal("answer_followup_selected", { source: "chat" }); }} disabled={isStreaming}>
                             {item}
                           </button>))}
                       </div>
