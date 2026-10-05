@@ -11,6 +11,7 @@ const load = async path => import(`data:text/javascript;base64,${Buffer.from(awa
 const evidence = await load("lib/evidence-utils.js");
 const validation = await load("lib/client-report-validation.js");
 const html = await load("lib/report-html.js");
+const citations = await load("lib/report-citations.js");
 const templates = await load("lib/report-templates.js");
 async function module(path, mocks) {
   const context = vm.createContext({ console, Date, Buffer, Response, URL });
@@ -61,7 +62,7 @@ test("report edits create a new draft and preserve server period, sources, and a
   let inserted;
   const library = await module("lib/workspace-reports.js", {
     mongodb: { ObjectId }, "@/lib/mongodb": { getDatabase: async () => ({ collection: () => ({ insertOne: async item => { inserted = item; return { insertedId: new ObjectId() }; } }) }) },
-    "@/lib/report-html": html, "@/lib/client-report-validation": validation
+    "@/lib/report-citations": citations, "@/lib/report-html": html, "@/lib/client-report-validation": validation
   });
   const parent = { ...draft, _id: new ObjectId(), state: "approved", seriesId: "series" };
   const result = await library.saveReportVersion({ workspace: workspaceData.workspace, report: { ...draft, overview: "<script>unsafe()</script>", sources: [{ href: "https://evil.test" }], period: {} }, parent, email: "member@example.test" });
@@ -73,7 +74,7 @@ test("members cannot approve reports; unauthenticated history is rejected", asyn
     "next/server": { NextResponse: json }, mongodb: { ObjectId }, "@/auth": { auth: handler => handler },
     "@/lib/data": { getWorkspaceDetailData: async () => workspaceData },
     "@/lib/mongodb": { getDatabase: async () => ({ collection: () => ({ findOne: async query => query.workspaceSlug === "sample" ? { ...draft, _id: query._id } : null }) }) },
-    "@/lib/evidence-utils": evidence, "@/lib/report-html": html,
+    "@/lib/report-citations": citations, "@/lib/evidence-utils": evidence, "@/lib/report-html": html,
     "@/lib/workspace-reports": { canReadSavedReport: async () => true, listWorkspaceReports: async () => [], saveReportVersion: async () => { throw new Error("Must not save"); } }
   });
   assert.equal((await api.POST(request({ workspaceSlug: "sample", id: new ObjectId().toString(), action: "approve" }))).status, 403);
@@ -83,7 +84,7 @@ test("saved report access is revoked when a source becomes private or belongs to
   let sourceVisible = false;
   const library = await module("lib/workspace-reports.js", {
     mongodb: { ObjectId }, "@/lib/mongodb": { getDatabase: async () => ({ collection: () => ({ findOne: async query => { assert.equal(query.workspaceSlug, "sample"); assert.deepEqual(query.aiPrivate.$ne, true); return sourceVisible ? { _id: query._id } : null; } }) }) },
-    "@/lib/report-html": html, "@/lib/client-report-validation": validation
+    "@/lib/report-citations": citations, "@/lib/report-html": html, "@/lib/client-report-validation": validation
   });
   const report = { ...draft, workspaceSlug: "sample", sources: [{ sourceType: "file", sourceId: new ObjectId().toString() }] };
   assert.equal(await library.canReadSavedReport(report, workspaceData), false);
@@ -136,7 +137,7 @@ test("both generation templates consume the actual dated context and persist a r
   await contextModule.link(() => { throw new Error("Unexpected import"); }); await contextModule.evaluate();
   const reports = await module("lib/workspace-reports.js", {
     mongodb: { ObjectId }, "@/lib/mongodb": { getDatabase: async () => ({ collection: () => ({ insertOne: async () => ({ insertedId: new ObjectId() }) }) }) },
-    "@/lib/report-html": html, "@/lib/client-report-validation": validation
+    "@/lib/report-citations": citations, "@/lib/report-html": html, "@/lib/client-report-validation": validation
   });
   const api = await module("app/api/ai/workspace-report/route.js", {
     "next/server": { NextResponse: json }, "@/auth": { auth: handler => handler },
@@ -153,4 +154,11 @@ test("both generation templates consume the actual dated context and persist a r
     assert.equal(result.status, 200); assert.ok(result.body.id); assert.equal(validation.validateWorkspaceReportResult(result.body, templateId), "ready");
     assert.match(result.body.html, /2026-10-01/); assert.doesNotMatch(result.body.html, />undefined</);
   }
+});
+
+test("unmatched citations are marked and cannot be approved while valid evidence and task citations remain", () => {
+ const content = { overview: "Evidence [S1], current task [T1], fabricated source [S99]." };
+ const result = citations.sanitizeReportCitations(content, [{ ref: "S1" }, { ref: "T1" }]);
+ assert.equal(result.unmatched, true); assert.match(result.content.overview, /\[S1\].*\[T1\]/); assert.doesNotMatch(result.content.overview, /S99/);
+ assert.equal(citations.hasUnknownCitations({ ...result.content, sources: [{ ref: "S1" }, { ref: "T1" }] }), true);
 });

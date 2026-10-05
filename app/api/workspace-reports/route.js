@@ -6,6 +6,7 @@ import { getWorkspaceDetailData } from "@/lib/data";
 import { getDatabase } from "@/lib/mongodb";
 import { canReadSavedReport, listWorkspaceReports, saveReportVersion } from "@/lib/workspace-reports";
 import { advanceReportDate } from "@/lib/evidence-utils";
+import { hasUnknownCitations } from "@/lib/report-citations";
 
 export const GET = auth(async request => {
   const email = request.auth?.user?.email;
@@ -28,6 +29,7 @@ export const POST = auth(async request => {
   if (!await canReadSavedReport(parent, data)) return NextResponse.json({ error: "Report source access has changed" }, { status: 403 });
   if (input.action === "approve") {
     if (!data.permissions.canManageWorkspaceMembers) return NextResponse.json({ error: "Workspace administrators approve reports" }, { status: 403 });
+    if (hasUnknownCitations(parent)) return NextResponse.json({ error: "Some citations cannot be matched to a source. Correct them in a new draft before approving." }, { status: 400 });
     const approvedHtml = buildWorkspaceProgressReportHtml({ workspace: parent.workspaceSnapshot || data.workspace, report: { ...parent, state: "approved" }, generatedAt: parent.createdAt });
     const approval = await db.collection("workspace_reports").updateOne({ _id: parent._id, state: "draft" }, { $set: { state: "approved", html: approvedHtml, approvedAt: new Date(), approvedBy: email } });
     if (approval.modifiedCount) {
